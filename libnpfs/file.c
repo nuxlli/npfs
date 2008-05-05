@@ -225,10 +225,6 @@ npfile_find(Npfile *dir, char *name)
 static int
 check_perm(u32 fperm, Npuser *fuid, Npgroup *fgid, Npuser *user, u32 perm)
 {
-	int i, n;
-	Npgroup *group;
-	gid_t *gids;
-
 	if (!user)
 		goto error;
 
@@ -242,14 +238,9 @@ check_perm(u32 fperm, Npuser *fuid, Npgroup *fgid, Npuser *user, u32 perm)
 	if (fuid==user && ((fperm>>6)&7) & perm)
 		return 1;
 
-	if (((fperm>>3)&7) & perm) {
-		n = np_usergroups(user, &gids);
-		for(i = 0; i < n; i++) {
-			group = np_gid2group(gids[i]);
-			if (fgid == group)
-				return 1;
-		}
-	}
+	if (((fperm>>3)&7) & perm)
+		if(user->upool->ismember(user->upool, user, fgid))
+			return 1;
 
 error:
 	np_werror(Eperm, EPERM);
@@ -371,25 +362,15 @@ npfile_attach(Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname)
 {
 	Npfile *root;
 	Npfilefid *f;
-	char *u;
-	Npuser *user;
 
 	root = (Npfile*) fid->conn->srv->treeaux;
-
-	u = np_strdup(uname);
-	user = np_uname2user(u);
-	free(u);
-	if (!user) {
-		np_werror(Eunknownuser, EIO);
-		return NULL;
-	}
-
-	if (!npfile_checkperm(root, user, 4)) 
+	if(!npfile_checkperm(root, fid->user, 4))
 		return NULL;
 
-	fid->user = user;
 	f = npfile_fidalloc(root, fid);
-	fid->user = user;
+	if(!f)
+		return NULL;
+
 	fid->aux = f;
 	np_fid_incref(fid);
 

@@ -33,10 +33,12 @@ struct Npcfid {
 	u64		offset;
 };
 
-Npcfsys* npc_mount(int fd, char *aname, char *uname);
+Npcfsys* npc_mount(int fd, char *aname, Npuser *user, 
+	int (*auth)(Npcfid *afid, Npuser *user, void *aux), void *aux);
 void npc_umount(Npcfsys *fs);
-Npcfsys * npc_netmount(char *address, char *uname, int dfltport);
-Npcfid* npc_create(Npcfsys *fs, char *path, u32 perm, int mode);
+struct addrinfo *npc_netaddr(char *address, int dfltport);
+Npcfsys * npc_netmount(struct addrinfo *address, Npuser *user, int dfltport, 
+	int (*auth)(Npcfid *afid, Npuser *user, void *aux), void *aux);
 Npcfid* npc_open(Npcfsys *fs, char *path, int mode);
 int npc_close(Npcfid *fid);
 int npc_remove(Npcfsys *fs, char *path);

@@ -62,9 +62,9 @@ main(int argc, char **argv)
 	port = 564;
 //	npc_chatty = 1;
 
-	user = np_uid2user(getuid());
+	user = np_uid2user(geteuid());
 	if (!user) {
-		fprintf(stderr, "cannot retrieve user %d\n", getuid());
+		fprintf(stderr, "cannot retrieve user %d\n", geteuid());
 		exit(1);
 	}
 
@@ -119,7 +119,7 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
-	fs = npc_mount(sfd, NULL, uname);
+	fs = npc_mount(sfd, NULL, "lucho");
 
 	fid = npc_open(fs, path, Owrite);
 	if (!fid) {

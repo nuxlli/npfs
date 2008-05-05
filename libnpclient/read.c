@@ -75,6 +75,7 @@ npc_read(Npcfid *fid, u8 *buf, u32 count, u64 offset)
 			l = count;
 		memmove(buf, rc->data, l);
 		free(rc);
+		free(tc);
 
 		if (l == 0)
 			break;
@@ -160,7 +161,7 @@ npc_readnb(Npcfid *fid, u8 *buf, u32 count, u64 offset,
 	nreq = count/iounit + (count%iounit?1:0);
 	r = malloc(sizeof(*r) + nreq*sizeof(Npcrcall));
 	if (!r) {
-		np_werror(Enomem, ENOMEM);
+		np_werror(Ennomem, ENOMEM);
 		return -1;
 	}
 

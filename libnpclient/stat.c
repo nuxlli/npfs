@@ -53,7 +53,7 @@ npc_stat(Npcfsys *fs, char *path)
 	free(tc);
 	st = malloc(npc_wstatlen(&rc->stat));
 	if (!st) {
-		np_werror(Enomem, ENOMEM);
+		np_werror(Ennomem, ENOMEM);
 		npc_close(fid);
 		return NULL;
 	}

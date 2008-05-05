@@ -58,6 +58,7 @@ struct Npcfsys {
 	u32		msize;
 	Nptrans*	trans;
 	Npcfid*		root;
+	Npcfid*		afid;
 
 	int		refcount;
 	Npcpool*	tagpool;

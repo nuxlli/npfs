@@ -312,7 +312,6 @@ ramfs_attach(Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
 {
 	Npfcall* ret;
 	Fid *fid;
-	char *u;
 	Npuser *user;
 
 	user = NULL;
@@ -320,14 +319,6 @@ ramfs_attach(Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
 
 	if (nafid != NULL) {
 		np_werror(Enoauth, EIO);
-		return NULL;
-	}
-
-	u = np_strdup(uname);
-	user = np_uname2user(u);
-	free(u);
-	if (!user) {
-		np_werror(Eunknownuser, EIO);
 		return NULL;
 	}
 
@@ -888,7 +879,7 @@ main(int argc, char **argv)
 	nwthreads = 4;
 	opts = "";
 	logfile = "/tmp/ramfs.log";
-	user = np_uid2user(getuid());
+	user = np_unix_users->uid2user(np_unix_users, getuid());
 	while ((c = getopt(argc, argv, "du:w:b:o:l:")) != -1) {
 		switch (c) {
 		case 'd':
@@ -896,7 +887,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'u':
-			user = np_uname2user(optarg);
+			user = np_unix_users->uname2user(np_unix_users, optarg);
 			break;
 
 		case 'b':

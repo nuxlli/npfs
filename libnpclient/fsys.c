@@ -61,7 +61,7 @@ npc_create_fsys(int fd, int msize)
 
 	fs = malloc(sizeof(*fs));
 	if (!fs) {
-		np_werror(Enomem, ENOMEM);
+		np_werror(Ennomem, ENOMEM);
 		return NULL;
 	}
 
@@ -213,7 +213,7 @@ npc_cancel_fid_requests(Npcfid *fid)
 
 	ftags = malloc(n * sizeof(u16));
 	if (!ftags) {
-		np_werror(Enomem, ENOMEM);
+		np_werror(Ennomem, ENOMEM);
 		pthread_mutex_unlock(&fs->lock);
 		return -1;
 	}
@@ -559,7 +559,7 @@ npc_reqalloc()
 
 	req = malloc(sizeof(*req));
 	if (!req)
-		np_werror(Enomem, ENOMEM);
+		np_werror(Ennomem, ENOMEM);
 
 	req->fsys = NULL;
 	req->tag = NOTAG;

@@ -21,15 +21,34 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-int dumpdata(u8 *data, int datalen);
+extern Npuserpool *np_unix_users;
 
-Npreq *np_req_alloc(Npconn *conn, Npfcall *tc);
-Npreq *np_req_ref(Npreq *);
-void np_req_unref(Npreq *);
+/* fcall.c */
+Npfcall *np_version(Npreq *req, Npfcall *tc);
+Npfcall *np_auth(Npreq *req, Npfcall *tc);
+Npfcall *np_attach(Npreq *req, Npfcall *tc);
+Npfcall *np_flush(Npreq *req, Npfcall *tc);
+Npfcall *np_walk(Npreq *req, Npfcall *tc);
+Npfcall *np_open(Npreq *req, Npfcall *tc);
+Npfcall *np_create(Npreq *req, Npfcall *tc);
+Npfcall *np_read(Npreq *req, Npfcall *tc);
+Npfcall *np_write(Npreq *req, Npfcall *tc);
+Npfcall *np_clunk(Npreq *req, Npfcall *tc);
+Npfcall *np_remove(Npreq *req, Npfcall *tc);
+Npfcall *np_stat(Npreq *req, Npfcall *tc);
+Npfcall *np_wstat(Npreq *req, Npfcall *tc);
 
+/* fmt.c */
+int np_printstat(FILE *f, Npstat *st, int dotu);
+int np_dump(FILE *f, u8 *data, int datalen);
+
+/* srv.c */
 void np_srv_add_req(Npsrv *srv, Npreq *req);
 void np_srv_remove_req(Npsrv *srv, Npreq *req);
 void np_srv_add_workreq(Npsrv *srv, Npreq *req);
 void np_srv_remove_workreq(Npsrv *srv, Npreq *req);
-
-int np_mount(char *mntpt, int mntflags, char *opts);
+Npreq *np_req_alloc(Npconn *conn, Npfcall *tc);
+Npreq *np_req_ref(Npreq*);
+void np_req_unref(Npreq*);
+void np_req_free(Npreq *req);
+void np_srv_process_fcall(Npconn *conn, Npfcall *tc);

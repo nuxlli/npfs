@@ -72,7 +72,7 @@ npc_create_pool(u32 maxid)
 
 	p = malloc(sizeof(*p));
 	if (!p) {
-		np_werror(Enomem, ENOMEM);
+		np_werror(Ennomem, ENOMEM);
 		return NULL;
 	}
 
@@ -82,7 +82,7 @@ npc_create_pool(u32 maxid)
 	p->msize = 32;	/* 256 ids */
 	p->map = malloc(p->msize);
 	if (!p->map) {
-		np_werror(Enomem, ENOMEM);
+		np_werror(Ennomem, ENOMEM);
 		free(p);
 		return NULL;
 	}

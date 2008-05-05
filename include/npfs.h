@@ -43,6 +43,7 @@ typedef struct Npauth Npauth;
 typedef struct Npsrv Npsrv;
 typedef struct Npuser Npuser;
 typedef struct Npgroup Npgroup;
+typedef struct Npuserpool Npuserpool;
 typedef struct Npfile Npfile;
 typedef struct Npfilefid Npfilefid;
 typedef struct Npfileops Npfileops;
@@ -224,6 +225,7 @@ struct Npfcall {
 	/* 9P2000.u extensions */
 	u32		ecode;			/* Rerror */
 	Npstr		extension;		/* Tcreate */
+	u32		n_uname;
 
 	Npfcall*	next;
 };
@@ -304,11 +306,11 @@ struct Npwthread {
 };
 
 struct Npauth {
-	Npfcall*	(*auth)(Npfid *afid, Npstr *uname, Npstr *aname);
-	Npfcall*	(*attach)(Npfid *afid, Npstr *uname, Npstr *aname);
-	Npfcall*	(*read)(Npfid *fid, u64 offset, u32 count);
-	Npfcall*	(*write)(Npfid *fid, u64 offset, u32 count, u8 *data);
-	Npfcall*	(*clunk)(Npfid *fid);
+	int	(*startauth)(Npfid *afid, char *aname, Npqid *aqid);
+	int	(*checkauth)(Npfid *fid, Npfid *afid, char *aname);
+	int	(*read)(Npfid *fid, u64 offset, u32 count, u8 *data);
+	int	(*write)(Npfid *fid, u64 offset, u32 count, u8 *data);
+	int	(*clunk)(Npfid *fid);
 };	
 
 struct Npsrv {
@@ -318,6 +320,7 @@ struct Npsrv {
 	void*		treeaux;
 	int		debuglevel;
 	Npauth*		auth;
+	Npuserpool*	upool;
 
 	void		(*start)(Npsrv *);
 	void		(*shutdown)(Npsrv *);
@@ -356,20 +359,39 @@ struct Npsrv {
 };
 
 struct Npuser {
+	pthread_mutex_t	lock;
+	int			refcount;
+	Npuserpool*	upool;
 	char*		uname;
 	uid_t		uid;
 	Npgroup*	dfltgroup;
-	int		ngroups;	
-	gid_t*		groups;
+	int			ngroups;	
+	Npgroup**	groups;
+	void*		aux;
 
 	Npuser*		next;
 };
 
 struct Npgroup {
+	pthread_mutex_t	lock;
+	int			refcount;
+	Npuserpool* upool;
 	char*		gname;
 	gid_t		gid;
+	void*		aux;
 
 	Npgroup*	next;
+};
+
+struct Npuserpool {
+	void*		aux;
+	Npuser*		(*uname2user)(Npuserpool *, char *uname);
+	Npuser*		(*uid2user)(Npuserpool *, u32 uid);
+	Npgroup*	(*gname2group)(Npuserpool *, char *gname);
+	Npgroup*	(*gid2group)(Npuserpool *, u32 gid);
+	int		(*ismember)(Npuserpool *, Npuser *u, Npgroup *g);
+	void		(*udestroy)(Npuserpool *, Npuser *u);
+	void		(*gdestroy)(Npuserpool *, Npgroup *g);
 };
 
 struct Npfile {
@@ -435,7 +457,7 @@ struct Npfilefid {
 };
 
 extern char *Eunknownfid;
-extern char *Enomem;
+extern char *Ennomem;
 extern char *Enoauth;
 extern char *Enotimpl;
 extern char *Einuse;
@@ -451,6 +473,7 @@ extern char *Eopen;
 extern char *Eexist;
 extern char *Enotempty;
 extern char *Eunknownuser;
+extern Npuserpool *np_unix_users;
 
 Npsrv *np_srv_create(int nwthread);
 void np_srv_remove_conn(Npsrv *, Npconn *);
@@ -493,13 +516,13 @@ int np_strncmp(Npstr *str, char *cs, int len);
 void np_set_tag(Npfcall *, u16);
 Npfcall *np_create_tversion(u32 msize, char *version);
 Npfcall *np_create_rversion(u32 msize, char *version);
-Npfcall *np_create_tauth(u32 fid, char *uname, char *aname);
+Npfcall *np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname, int dotu);
 Npfcall *np_create_rauth(Npqid *aqid);
 Npfcall *np_create_rerror(char *ename, int ecode, int dotu);
 Npfcall *np_create_rerror1(Npstr *ename, int ecode, int dotu);
 Npfcall *np_create_tflush(u16 oldtag);
 Npfcall *np_create_rflush(void);
-Npfcall *np_create_tattach(u32 fid, u32 afid, char *uname, char *aname);
+Npfcall *np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname, int dotu);
 Npfcall *np_create_rattach(Npqid *qid);
 Npfcall *np_create_twalk(u32 fid, u32 newfid, u16 nwname, char **wnames);
 Npfcall *np_create_rwalk(int nwqid, Npqid *wqids);
@@ -525,22 +548,32 @@ void np_set_rread_count(Npfcall *, u32);
 int np_printstat(FILE *f, Npstat *st, int dotu);
 int np_printfcall(FILE *f, Npfcall *fc, int dotu);
 
-Npuser* np_uid2user(int uid);
-Npuser* np_uname2user(char *uname);
-Npgroup* np_gid2group(gid_t gid);
-Npgroup* np_gname2group(char *gname);
-int np_usergroups(Npuser *u, gid_t **gids);
+void np_user_incref(Npuser *);
+void np_user_decref(Npuser *);
+void np_group_incref(Npgroup *);
+void np_group_decref(Npgroup *);
 int np_change_user(Npuser *u);
+Npuser* np_current_user(void);
+
+Npuserpool *np_priv_userpool_create();
+Npuser *np_priv_user_add(Npuserpool *up, char *uname, u32 uid, void *aux);
+void np_priv_user_del(Npuser *u);
+int np_priv_user_setdfltgroup(Npuser *u, Npgroup *g);
+Npgroup *np_priv_group_add(Npuserpool *up, char *gname, u32 gid);
+void np_priv_group_del(Npgroup *g);
+int np_priv_group_adduser(Npgroup *g, Npuser *u);
+int np_priv_group_deluser(Npgroup *g, Npuser *u);
 
 Nptrans *np_fdtrans_create(int, int);
 Npsrv *np_socksrv_create_tcp(int, int*);
 Npsrv *np_pipesrv_create(int nwthreads);
 int np_pipesrv_mount(Npsrv *srv, char *mntpt, char *user, int mntflags, char *opts);
 
-void np_werror(char *ename, int ecode);
+void np_werror(char *ename, int ecode, ...);
 void np_rerror(char **ename, int *ecode);
 int np_haserror(void);
 void np_uerror(int ecode);
+void np_suerror(char *s, int ecode);
 
 Npfile* npfile_alloc(Npfile *parent, char *name, u32 mode, u64 qpath, 
 	void *ops, void *aux);
@@ -562,3 +595,6 @@ Npfcall *npfile_clunk(Npfid *fid);
 Npfcall *npfile_remove(Npfid *fid);
 Npfcall *npfile_stat(Npfid *fid);
 Npfcall *npfile_wstat(Npfid *fid, Npstat *stat);
+
+void *np_malloc(int);
+int np_mount(char *mntpt, int mntflags, char *opts);

@@ -55,6 +55,7 @@ static Socksrv*
 np_socksrv_create_common(int domain, int type, int proto)
 {
 	Socksrv *ss;
+	int flag = 1;
 
 	ss = malloc(sizeof(*ss));
 	ss->domain = domain;
@@ -67,6 +68,7 @@ np_socksrv_create_common(int domain, int type, int proto)
 		free(ss);
 		return NULL;
 	}
+	setsockopt(ss->sock, SOL_SOCKET, SO_REUSEADDR, (char *)&flag, sizeof(int));
 
 	return ss;
 }
@@ -74,11 +76,13 @@ np_socksrv_create_common(int domain, int type, int proto)
 static int
 np_socksrv_connect(Socksrv *ss)
 {
+	int flag = 1;
 	ss->sock = socket(ss->domain, ss->type, ss->proto);
 	if (ss->sock < 0) {
 		np_uerror(errno);
 		return -1;
 	}
+	setsockopt(ss->sock, SOL_SOCKET, SO_REUSEADDR, (char *)&flag, sizeof(int));
 
 	if (bind(ss->sock, ss->saddr, ss->saddrlen) < 0) {
 		np_uerror(errno);

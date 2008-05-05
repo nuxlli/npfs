@@ -29,62 +29,76 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <arpa/inet.h>
+
 #include "npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"
 
-Npcfsys *
-npc_netmount(char *address, char *uname, int dfltport)
+struct addrinfo *
+npc_netaddr(char *address, int dfltport)
 {
-	int fd, port;
-	char *addr, *name, *p, *s;
-	struct sockaddr_in saddr;
-	struct hostent *hostinfo;
+	int fd, r;
+	char *addr, *name, *p, *port;
+	/* stupid library doesn't set it to NULL if error! */
+	struct addrinfo *addrlist = NULL;
 
 	addr = strdup(address);
+	port = (char *) malloc(sizeof(char) * 6);
 	if (strncmp(addr, "tcp!", 4) == 0)
 		name = addr + 4;
 	else
 		name = addr;
 
-	port = dfltport;
 	p = strrchr(name, '!');
 	if (p) {
 		*p = '\0';
 		p++;
-		port = strtol(p, &s, 10);
-		if (*s != '\0') {
-			np_werror("invalid port format", EIO);
-			goto error;
-		}
+		sprintf(port, "%s", p);
 	}
+	else 
+		sprintf(port, "%d", dfltport);
+	
+	/* they have this cute 'hints' thing you can put in. 
+	 * it would be really great if it worked, but it fails in some 
+	 * places, so just don't use it.
+	 */
+	r = getaddrinfo(name, port, NULL, &addrlist);
+	
+	if (r) {
+		np_werror("cannot resolve name", EIO);
+		close(fd);
+	}
+	return addrlist;
+}
 
-	fd = socket(PF_INET, SOCK_STREAM, 0);
+
+Npcfsys *
+npc_netmount(struct addrinfo *addrlist, Npuser *user, int dfltport, 
+	int (*auth)(Npcfid *afid, Npuser *user, void *aux), void *aux)
+{
+	char *s;
+	int fd;
+	char ename[32];
+
+	fd = socket(addrlist->ai_family, addrlist->ai_socktype, 0);
 	if (fd < 0) {
 		np_uerror(errno);
 		goto error;
 	}
 
-	hostinfo = gethostbyname(name);
-	if (!hostinfo) {
-		np_werror("cannot resolve name", EIO);
+	if (connect(fd, addrlist->ai_addr, sizeof(*addrlist->ai_addr)) < 0) {
+		/* real computers have errstr */
+		strerror_r(errno, ename, sizeof(ename));
+		s = inet_ntoa(*(struct in_addr*) addrlist->ai_addr);
+		np_werror("%s:%s", errno, s, ename);
+		close(fd);
 		goto error;
 	}
 
-	saddr.sin_family = AF_INET;
-	saddr.sin_port = htons(port);
-	saddr.sin_addr = *(struct in_addr *) hostinfo->h_addr;
-
-	if (connect(fd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
-		np_uerror(errno);
-		goto error;
-	}
-
-	free(addr);
-	return npc_mount(fd, NULL, uname);
+	return npc_mount(fd, NULL, user, auth, aux);
 
 error:
-	free(addr);
 	return NULL;
 }
 

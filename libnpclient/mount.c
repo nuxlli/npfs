@@ -32,7 +32,8 @@
 #include "npcimpl.h"
 
 Npcfsys*
-npc_mount(int fd, char *aname, char *uname)
+npc_mount(int fd, char *aname, Npuser *user, 
+	int (*auth)(Npcfid *afid, Npuser *user, void *aux), void *aux)
 {
 	Npcfsys *fs;
 	Npfcall *tc, *rc;
@@ -57,11 +58,30 @@ npc_mount(int fd, char *aname, char *uname)
 	free(rc);
 	tc = rc = NULL;
 
+	if (auth) {
+		fs->afid = npc_fid_alloc(fs);
+		if (!fs->afid)
+			goto error;
+
+		tc = np_create_tauth(fs->afid->fid, user?user->uname:NULL, aname, 
+			user?user->uid:-1, fs->dotu);
+		if (npc_rpc(fs, tc, &rc) < 0) {
+			npc_fid_free(fs->afid);
+			fs->afid = NULL;
+		} else if ((*auth)(fs->afid, user, aux) < 0)
+				goto error;
+
+		free(tc);
+		free(rc);
+		tc = rc = NULL;
+	}
+
 	fs->root = npc_fid_alloc(fs);
 	if (!fs->root) 
 		goto error;
 
-	tc = np_create_tattach(fs->root->fid, NOFID, uname, aname);
+	tc = np_create_tattach(fs->root->fid, fs->afid?fs->afid->fid:NOFID, 
+		user->uname, aname, user->uid, fs->dotu);
 	if (npc_rpc(fs, tc, &rc) < 0)
 		goto error;
 

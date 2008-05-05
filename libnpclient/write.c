@@ -158,7 +158,7 @@ npc_writenb(Npcfid *fid, u8 *buf, u32 count, u64 offset,
 	nreq = count/iounit + (count%iounit?1:0);
 	r = malloc(sizeof(*r) + nreq*sizeof(Npcwcall));
 	if (!r) {
-		np_werror(Enomem, ENOMEM);
+		np_werror(Ennomem, ENOMEM);
 		return -1;
 	}
 

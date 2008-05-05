@@ -37,7 +37,7 @@ npc_fid_alloc(Npcfsys *fs)
 
 	ret = malloc(sizeof(*ret));
 	if (!ret) {
-		np_werror(Enomem, ENOMEM);
+		np_werror(Ennomem, ENOMEM);
 		return NULL;
 	}
 

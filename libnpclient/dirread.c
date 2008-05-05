@@ -69,7 +69,7 @@ npc_dirread(Npcfid *fid, Npwstat **statpp)
 
 	statp = malloc(slen);
 	if (!statp) {
-		np_werror(Enomem, ENOMEM);
+		np_werror(Ennomem, ENOMEM);
 		free(buf);
 	}
 

@@ -27,6 +27,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <errno.h>
+#include <sys/mount.h>
 #include "npfs.h"
 #include "npfsimpl.h"
 
@@ -91,7 +92,7 @@ np_pipesrv_mount(Npsrv *srv, char *mntpt, char *user, int mntflags, char *opts)
 		srv->msize, user, srv->dotu?"":"noextend",
 		ps->pipout[0], ps->pipin[1], opts);
  
-	n = np_mount(mntpt, mntflags, options);
+	n = mount("none", mntpt, "9p", mntflags, options);
 	if (n < 0) {
 		ret = errno;
 		fprintf(stderr, "cannot mount: %d %s\n", ret, strerror(ret));

@@ -74,7 +74,7 @@ static void ustat2qid(struct stat *st, Npqid *qid);
 static u8 ustat2qidtype(struct stat *st);
 static u32 umode2npmode(mode_t umode, int dotu);
 static mode_t npstat2umode(Npstat *st, int dotu);
-static void ustat2npwstat(char *path, struct stat *st, Npwstat *wstat, int dotu);
+static void ustat2npwstat(char *path, struct stat *st, Npwstat *wstat, int dotu, Npuserpool *up);
 
 static Npfcall* npfs_attach(Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname);
 static int npfs_clone(Npfid *fid, Npfid *newfid);
@@ -390,7 +390,7 @@ npstat2umode(Npstat *st, int dotu)
 }
 
 static void
-ustat2npwstat(char *path, struct stat *st, Npwstat *wstat, int dotu)
+ustat2npwstat(char *path, struct stat *st, Npwstat *wstat, int dotu, Npuserpool *up)
 {
 	int err;
 	Npuser *u;
@@ -404,8 +404,8 @@ ustat2npwstat(char *path, struct stat *st, Npwstat *wstat, int dotu)
 	wstat->mtime = st->st_mtime;
 	wstat->length = st->st_size;
 
-	u = np_uid2user(st->st_uid);
-	g = np_gid2group(st->st_gid);
+	u = up->uid2user(up, st->st_uid);
+	g = up->gid2group(up, st->st_gid);
 	
 	wstat->uid = u?u->uname:"???";
 	wstat->gid = g?g->gname:"???";
@@ -464,18 +464,8 @@ npfs_attach(Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
 		goto done;
 	}
 
-	fid = npfs_fidalloc();
-	fid->omode = -1;
-	user = np_strdup(uname);
-	nfid->user = np_uname2user(user);
-	free(user);
-	if (!nfid->user) {
-		free(fid);
-		np_werror(Eunknownuser, EIO);
-		goto done;
-	}
 	npfs_change_user(nfid->user);
-
+	fid = npfs_fidalloc();
 	fid->omode = -1;
 	if (aname->len==0 || *aname->str!='/')
 		fid->path = strdup("/");
@@ -750,14 +740,16 @@ out:
 }
 
 static u32
-npfs_read_dir(Fid *f, u8* buf, u64 offset, u32 count, int dotu)
+npfs_read_dir(Npfid *fid, u8* buf, u64 offset, u32 count, int dotu)
 {
 	int i, n, plen;
 	char *dname, *path;
 	struct dirent *dirent;
 	struct stat st;
 	Npwstat wstat;
+	Fid *f;
 
+	f = fid->aux;
 	if (offset == 0) {
 		rewinddir(f->dir);
 		f->diroffset = 0;
@@ -789,7 +781,7 @@ npfs_read_dir(Fid *f, u8* buf, u64 offset, u32 count, int dotu)
 			return 0;
 		}
 
-		ustat2npwstat(path, &st, &wstat, dotu);
+		ustat2npwstat(path, &st, &wstat, dotu, fid->conn->srv->upool);
 		i = np_serialize_stat(&wstat, buf + n, count - n - 1, dotu);
 		free(wstat.extension);
 		free(path);
@@ -824,7 +816,7 @@ npfs_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 	ret = np_alloc_rread(count);
 	npfs_change_user(fid->user);
 	if (f->dir)
-		n = npfs_read_dir(f, ret->data, offset, count, fid->conn->dotu);
+		n = npfs_read_dir(fid, ret->data, offset, count, fid->conn->dotu);
 	else {
 		if (use_aio) {
 			n = npfs_aio_read(fid, ret, offset, count, req);
@@ -917,7 +909,7 @@ npfs_stat(Npfid *fid)
 	if (err < 0)
 		create_rerror(err);
 
-	ustat2npwstat(f->path, &f->stat, &wstat, fid->conn->dotu);
+	ustat2npwstat(f->path, &f->stat, &wstat, fid->conn->dotu, fid->conn->srv->upool);
 
 	ret = np_create_rstat(&wstat, fid->conn->dotu);
 	free(wstat.extension);
@@ -937,9 +929,11 @@ npfs_wstat(Npfid *fid, Npstat *stat)
 	Npuser *user;
 	Npgroup *group;
 	struct utimbuf tb;
+	Npuserpool *up;
 
 	ret = NULL;
 	f = fid->aux;
+	up = fid->conn->srv->upool;
 	npfs_change_user(fid->user);
 	err = fidstat(f);
 	if (err < 0) {
@@ -957,7 +951,7 @@ npfs_wstat(Npfid *fid, Npstat *stat)
 
 	if (uid == -1 && stat->uid.len) {
 		s = np_strdup(&stat->uid);
-		user = np_uname2user(s);
+		user = up->uname2user(up, s);
 		free(s);
 		if (!user) {
 			np_werror(Eunknownuser, EIO);
@@ -969,7 +963,7 @@ npfs_wstat(Npfid *fid, Npstat *stat)
 
 	if (gid == -1 && stat->gid.len) {
 		s = np_strdup(&stat->gid);
-		group = np_gname2group(s);
+		group = up->gname2group(up, s);
 		free(s);
 		if (!group) {
 			np_werror(Eunknownuser, EIO);

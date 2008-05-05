@@ -41,13 +41,17 @@ np_fidpool_destroy(Npfid **pool)
 {
 	int i;
 	Npfid *f, *ff;
+	Npsrv *srv;
 
 	for(i = 0; i < FID_HTABLE_SIZE; i++) {
 		f = pool[i];
 		while (f != NULL) {
 			ff = f->next;
-			if (f->conn->srv->fiddestroy)
-				(*f->conn->srv->fiddestroy)(f);
+			srv = f->conn->srv;
+			if (f->type&Qtauth && srv->auth->clunk)
+				(*srv->auth->clunk)(f);
+			else if (!(f->type&Qtauth) && srv->fiddestroy)
+				(*srv->fiddestroy)(f);
 			free(f);
 			f = ff;
 		}
@@ -120,19 +124,30 @@ np_fid_destroy(Npfid *fid)
 {
 	int hash;
 	Npconn *conn;
+	Npsrv *srv;
 	Npfid **htable, *f, **prevp;
 
 	conn = fid->conn;
 	hash = fid->fid % FID_HTABLE_SIZE;
 	htable = conn->fidpool;
+	if(!htable)
+		return 0;
+
 	pthread_mutex_lock(&conn->lock);
 	prevp = &htable[hash];
 	f = *prevp;
 	while (f != NULL) {
 		if (f->fid == fid->fid) {
 			*prevp = f->next;
-			if (f->conn->srv->fiddestroy)
-				(*f->conn->srv->fiddestroy)(f);
+			srv = f->conn->srv;
+			if (f->type & Qtauth && srv->auth->clunk)
+				(*srv->auth->clunk)(f);
+			else if (!(f->type&Qtauth) && srv->fiddestroy)
+				(*srv->fiddestroy)(f);
+
+			if (f->user)
+				np_user_decref(f->user);
+
 			free(f);
 			break;
 		}

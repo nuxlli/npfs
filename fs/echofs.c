@@ -78,7 +78,7 @@ main(int argc, char **argv)
 
 	debuglevel = 0;
 	nwthreads = 16;
-	user = np_uid2user(getuid());
+	user = np_unix_users->uid2user(np_unix_users, getuid());
 	while ((c = getopt(argc, argv, "dw:")) != -1) {
 		switch (c) {
 		case 'd':

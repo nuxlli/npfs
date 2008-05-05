@@ -25,6 +25,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <errno.h>
+#include <stdarg.h>
 #include "npfs.h"
 
 typedef struct Nperror Nperror;
@@ -46,15 +47,49 @@ np_destroy_error(void *a)
 	free(err);
 }
 
+void *
+np_malloc(int size)
+{
+	void *ret;
+
+	ret = malloc(size);
+	if (!ret)
+		np_werror(Ennomem, ENOMEM);
+
+	return ret;
+}
+
 static void
 np_init_error_key()
 {
 	pthread_key_create(&error_key, np_destroy_error);
 }
 
-void
-np_werror(char *ename, int ecode)
+static void
+np_vwerror(Nperror *err, char *ename, int ecode, va_list ap)
 {
+	if (err->ename && err->ename != Ennomem) {
+		free(err->ename);
+		err->ename = NULL;
+	}
+
+	err->ecode = ecode;
+	if (ename) {
+		/* RHEL5 has issues
+		vasprintf(&err->ename, ename, ap);
+		  */
+		err->ename = malloc(1024);
+		if (!err->ename) {
+			err->ename = Ennomem;
+			err->ecode = ENOMEM;
+		} else
+			vsnprintf(err->ename, 1024, ename, ap);
+	}
+}
+void
+np_werror(char *ename, int ecode, ...)
+{
+	va_list ap;
 	Nperror *err;
 
 	pthread_once(&error_once, np_init_error_key);
@@ -67,16 +102,13 @@ np_werror(char *ename, int ecode)
 		}
 
 		err->ename = NULL;
+		err->ecode = 0;
 		pthread_setspecific(error_key, err);
 	}
 
-	free(err->ename);
-	if (ename)
-		err->ename = strdup(ename);
-	else
-		err->ename = NULL;
-
-	err->ecode = ecode;
+	va_start(ap, ecode);
+	np_vwerror(err, ename, ecode, ap);
+	va_end(ap);
 }
 
 void
@@ -117,3 +149,13 @@ np_uerror(int ecode)
 	np_werror(buf, ecode);
 }
 
+void
+np_suerror(char *s, int ecode)
+{
+	char err[256], *str;
+	char buf[512];
+
+	str = strerror_r(ecode, err, sizeof(err));
+	snprintf(buf, sizeof(buf), "%s: %s", s, str);
+	np_werror(buf, ecode);
+}

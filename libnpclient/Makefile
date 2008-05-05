@@ -22,6 +22,12 @@ libnpclient.a: $(LIBFILES)
 	ar rc libnpclient.a $(LIBFILES)
 	ranlib libnpclient.a
 
+install:
+	mkdir -p $(INSTALLPREFIX)/include
+	mkdir -p $(INSTALLPREFIX)/lib
+	cp ../include/npclient.h $(INSTALLPREFIX)/include
+	cp libnpclient.a $(INSTALLPREFIX)/lib
+
 clean:
 	rm -f *.o *.a *~
 	make -C examples clean

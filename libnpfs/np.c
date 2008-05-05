@@ -430,7 +430,7 @@ np_create_rversion(u32 msize, char *version)
 }
 
 Npfcall *
-np_create_tauth(u32 fid, char *uname, char *aname)
+np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname, int dotu)
 {
 	int size;
 	Npfcall *fc;
@@ -452,6 +452,9 @@ np_create_tauth(u32 fid, char *uname, char *aname)
 	buf_put_int32(bufp, fid, &fc->fid);
 	buf_put_str(bufp, uname, &fc->uname);
 	buf_put_str(bufp, aname, &fc->aname);
+	if (dotu)
+		buf_put_int32(bufp, n_uname, &fc->n_uname);
+
 	return np_post_check(fc, bufp);
 }
 
@@ -556,7 +559,7 @@ np_create_rflush(void)
 }
 
 Npfcall *
-np_create_tattach(u32 fid, u32 afid, char *uname, char *aname)
+np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname, int dotu)
 {
 	int size;
 	Npfcall *fc;
@@ -571,6 +574,9 @@ np_create_tattach(u32 fid, u32 afid, char *uname, char *aname)
 	if (aname)
 		size += strlen(aname);
 
+	if (dotu)
+		size += 4; /* n_uname[4] */
+
 	fc = np_create_common(bufp, size, Tattach);
 	if (!fc)
 		return NULL;
@@ -579,6 +585,8 @@ np_create_tattach(u32 fid, u32 afid, char *uname, char *aname)
 	buf_put_int32(bufp, afid, &fc->afid);
 	buf_put_str(bufp, uname, &fc->uname);
 	buf_put_str(bufp, aname, &fc->aname);
+	if (dotu)
+		buf_put_int32(bufp, n_uname, &fc->n_uname);
 	return np_post_check(fc, bufp);
 }
 
