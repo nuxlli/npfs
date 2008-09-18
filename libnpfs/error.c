@@ -92,9 +92,6 @@ np_werror(char *ename, int ecode, ...)
 	va_list ap;
 	Nperror *err;
 
-	if (ecode == 5)
-		printf("EIO...\n");
-
 	pthread_once(&error_once, np_init_error_key);
 	err = pthread_getspecific(error_key);
 	if (!err) {
