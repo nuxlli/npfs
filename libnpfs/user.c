@@ -32,8 +32,6 @@
 #include "npfs.h"
 #include "npfsimpl.h"
 
-static Npuser *currentUser;
-
 void
 np_user_incref(Npuser *u)
 {
@@ -108,10 +106,7 @@ np_change_user(Npuser *u)
 	int i;
 	gid_t *gids;
 
-	if (currentUser == u)
-		return 0;
-
-	if (setreuid(0, 0) < 0) 
+	if (sreuid(0, 0) < 0) 
 		goto error;
 
 	gids = np_malloc(u->ngroups * sizeof(gid_t));
@@ -123,16 +118,13 @@ np_change_user(Npuser *u)
 
 	if (u->ngroups > 0) {
 		setgroups(u->ngroups, gids);
-		if (setregid(-1, u->dfltgroup->gid) < 0)
+		if (sregid(-1, u->dfltgroup->gid) < 0)
 			goto error;
 	}
 
-	if (setreuid(-1, u->uid) < 0)
+	if (sreuid(-1, u->uid) < 0)
 		goto error;
 
-	np_user_incref(u);
-	np_user_decref(currentUser);
-	currentUser = u;
 	return 0;
 
 error:
@@ -143,5 +135,5 @@ error:
 Npuser *
 np_current_user(void)
 {
-	return currentUser;
+	return NULL;
 }

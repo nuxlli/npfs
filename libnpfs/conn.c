@@ -32,7 +32,7 @@
 extern int printfcall(FILE *f, Npfcall *fc, int dotu);
 
 static Npfcall *np_conn_new_incall(Npconn *conn);
-static void np_conn_free_incall(Npconn *, Npfcall *);
+static void np_conn_free_incall(Npconn *, Npfcall *, int);
 static void *np_conn_read_proc(void *);
 
 Npconn*
@@ -46,6 +46,7 @@ np_conn_create(Npsrv *srv, Nptrans *trans)
 
 	//fprintf(stderr, "np_conn_create %p\n", conn);
 	pthread_mutex_init(&conn->lock, NULL);
+	pthread_mutex_init(&conn->wlock, NULL);
 	pthread_cond_init(&conn->resetcond, NULL);
 	pthread_cond_init(&conn->resetdonecond, NULL);
 	conn->refcount = 0;
@@ -169,7 +170,7 @@ again:
 	pthread_mutex_lock(&conn->lock);
 	trans = conn->trans;
 	conn->trans = NULL;
-	np_conn_free_incall(conn, fc);
+	np_conn_free_incall(conn, fc, 0);
 	pthread_mutex_unlock(&conn->lock);
 
 	np_srv_remove_conn(conn->srv, conn);
@@ -315,7 +316,7 @@ np_conn_shutdown(Npconn *conn)
 void
 np_conn_respond(Npreq *req)
 {
-	int n;
+	int n, send;
 	Npconn *conn;
 	Nptrans *trans;
 	Npfcall *rc;
@@ -323,25 +324,36 @@ np_conn_respond(Npreq *req)
 	trans = NULL;
 	conn = req->conn;
 	rc = req->rcall;
+	if (!rc)
+		goto done;
+
 	pthread_mutex_lock(&conn->lock);
-	if (conn->trans && !conn->resetting && rc) {
+	send = conn->trans && !conn->resetting;
+	pthread_mutex_unlock(&conn->lock);
+
+	if (send) {
+		pthread_mutex_lock(&conn->wlock);
 		if (conn->srv->debuglevel) {
 			fprintf(stderr, ">>> (%p) ", conn);
 			np_printfcall(stderr, rc, conn->dotu);
 			fprintf(stderr, "\n");
 		}
 		n = np_trans_write(conn->trans, rc->pkt, rc->size);
+		pthread_mutex_unlock(&conn->wlock);
+
 		if (n <= 0) {
+			pthread_mutex_lock(&conn->lock);
 			trans = conn->trans;
 			conn->trans = NULL;
+			pthread_mutex_unlock(&conn->lock);
 		}
 	}
 
-	np_conn_free_incall(req->conn, req->tcall);
+done:
+	np_conn_free_incall(req->conn, req->tcall, 1);
 	free(req->rcall);
 	req->tcall = NULL;
 	req->rcall = NULL;
-	pthread_mutex_unlock(&conn->lock);
 
 	if (conn->resetting) {
 		pthread_mutex_lock(&conn->srv->lock);
@@ -384,18 +396,22 @@ np_conn_new_incall(Npconn *conn)
 }
 
 static void
-np_conn_free_incall(Npconn* conn, Npfcall *rc)
+np_conn_free_incall(Npconn* conn, Npfcall *rc, int lock)
 {
 	if (!rc)
 		return;
 
-//	pthread_mutex_lock(&conn->lock);
+	if (lock)
+		pthread_mutex_lock(&conn->lock);
+
 	if (conn->freercnum < 64) {
 		rc->next = conn->freerclist;
 		conn->freerclist = rc;
 		rc = NULL;
 	}
-//	pthread_mutex_unlock(&conn->lock);
+
+	if (lock)
+		pthread_mutex_unlock(&conn->lock);
 
 	if (rc)
 		free(rc);

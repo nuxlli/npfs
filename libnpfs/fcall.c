@@ -307,6 +307,7 @@ np_walk(Npreq *req, Npfcall *tc)
 	}
 
 	if (tc->fid != tc->newfid) {
+//		printf("newfid conn %p fid %d\n", conn, tc->newfid); 
 		newfid = np_fid_find(conn, tc->newfid);
 		if (newfid) {
 			np_werror(Einuse, EIO);

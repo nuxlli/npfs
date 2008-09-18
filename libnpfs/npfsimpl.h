@@ -52,3 +52,5 @@ Npreq *np_req_ref(Npreq*);
 void np_req_unref(Npreq*);
 void np_req_free(Npreq *req);
 void np_srv_process_fcall(Npconn *conn, Npfcall *tc);
+int sreuid(int a, int b);
+int sregid(int a, int b);

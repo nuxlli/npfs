@@ -16,13 +16,16 @@ LIBFILES=\
 	file.o\
 	fmt.o\
 	np.o\
-	pipesrv.o\
 	pvusers.o\
 	socksrv.o\
 	srv.o\
 	trans.o\
 	user.o\
 	uxusers.o\
+
+ifeq ($(SYSNAME), Linux)
+	LIBFILES += pipesrv.o
+endif
 
 libnpfs.a: $(LIBFILES)
 	ar rc libnpfs.a $(LIBFILES)

@@ -62,6 +62,12 @@ Npsrv *srv;
 int debuglevel;
 int sameuser;
 
+pthread_mutex_t culock = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cucond = PTHREAD_COND_INITIALIZER;
+Npuser *cuser;
+int curef;
+int maxref;
+
 char *Estatfailed = "stat failed";
 char *Ebadfid = "fid unknown or out of range";
 char *Enoextension = "empty extension while creating special file";
@@ -441,10 +447,15 @@ ustat2npwstat(char *path, struct stat *st, Npwstat *wstat, int dotu, Npuserpool 
 }
 
 static inline void
-npfs_change_user(Npuser *user)
+npfs_set_user(Npuser *user)
 {
-	if (!sameuser)
-		np_change_user(user);
+	if (sameuser)
+		return;
+
+	if (geteuid() == user->uid)
+		return;
+
+	np_change_user(user);
 }
 
 static Npfcall*
@@ -459,12 +470,12 @@ npfs_attach(Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
 	user = NULL;
 	ret = NULL;
 
+	npfs_set_user(nfid->user);
 	if (nafid != NULL) {
 		np_werror(Enoauth, EIO);
 		goto done;
 	}
 
-	npfs_change_user(nfid->user);
 	fid = npfs_fidalloc();
 	fid->omode = -1;
 	if (aname->len==0 || *aname->str!='/')
@@ -510,7 +521,7 @@ npfs_walk(Npfid *fid, Npstr* wname, Npqid *wqid)
 	char *path;
 
 	f = fid->aux;
-	npfs_change_user(fid->user);
+	npfs_set_user(fid->user);
 	n = fidstat(f);
 	if (n < 0)
 		create_rerror(n);
@@ -543,7 +554,7 @@ npfs_open(Npfid *fid, u8 mode)
 	Npqid qid;
 
 	f = fid->aux;
-	npfs_change_user(fid->user);
+	npfs_set_user(fid->user);
 	if ((err = fidstat(f)) < 0)
 		create_rerror(err);
 
@@ -814,7 +825,7 @@ npfs_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 
 	f = fid->aux;
 	ret = np_alloc_rread(count);
-	npfs_change_user(fid->user);
+	npfs_set_user(fid->user);
 	if (f->dir)
 		n = npfs_read_dir(fid, ret->data, offset, count, fid->conn->dotu);
 	else {
@@ -845,7 +856,7 @@ npfs_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 	Fid *f;
 
 	f = fid->aux;
-	npfs_change_user(fid->user);
+	npfs_set_user(fid->user);
 
 	if (use_aio) {
 		n = npfs_aio_write(fid, data, offset, count, req);
@@ -881,7 +892,7 @@ npfs_remove(Npfid *fid)
 
 	ret = NULL;
 	f = fid->aux;
-	npfs_change_user(fid->user);
+	npfs_set_user(fid->user);
 	if (remove(f->path) < 0) {
 		create_rerror(errno);
 		goto out;
@@ -904,7 +915,7 @@ npfs_stat(Npfid *fid)
 	Npwstat wstat;
 
 	f = fid->aux;
-	npfs_change_user(fid->user);
+	npfs_set_user(fid->user);
 	err = fidstat(f);
 	if (err < 0)
 		create_rerror(err);
@@ -934,7 +945,7 @@ npfs_wstat(Npfid *fid, Npstat *stat)
 	ret = NULL;
 	f = fid->aux;
 	up = fid->conn->srv->upool;
-	npfs_change_user(fid->user);
+	npfs_set_user(fid->user);
 	err = fidstat(f);
 	if (err < 0) {
 		create_rerror(err);
@@ -1046,7 +1057,7 @@ npfs_aio_respond(Aioreq *areq, struct io_event *event, int flush)
 	rc = NULL;
 
 	if (count<0 && !flush) {
-		if (areq->req->tcall->id == Tread)
+		if (areq->req->tcall->type == Tread)
 			free(areq->rread);
 
 		if (strerror_r(count, buf, sizeof(buf)))
@@ -1054,7 +1065,7 @@ npfs_aio_respond(Aioreq *areq, struct io_event *event, int flush)
 
 		rc = np_create_rerror(buf, count, areq->req->conn->dotu);
 	} else {
-		if (areq->req->tcall->id == Tread) {
+		if (areq->req->tcall->type == Tread) {
 			rc = areq->rread;
 			np_set_rread_count(rc, count);
 		} else {

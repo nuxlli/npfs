@@ -34,6 +34,7 @@ typedef struct Npstat Npstat;
 typedef struct Npwstat Npwstat;
 typedef struct Npfcall Npfcall;
 typedef struct Npfid Npfid;
+typedef struct Npfidpool Npfidpool;
 typedef struct Npbuf Npbuf;
 typedef struct Nptrans Nptrans;
 typedef struct Npconn Npconn;
@@ -231,6 +232,7 @@ struct Npfcall {
 };
 
 struct Npfid {
+	pthread_mutex_t	lock;
 	Npconn*		conn;
 	u32		fid;
 	int		refcount;
@@ -241,6 +243,7 @@ struct Npfid {
 	void*		aux;
 
 	Npfid*		next;	/* list of fids within a bucket */
+	Npfid*		prev;
 };
 
 struct Npbuf {
@@ -258,8 +261,15 @@ struct Nptrans {
 	void		(*destroy)(void *);
 };
 
+struct Npfidpool {
+	pthread_mutex_t	lock;
+	int		size;
+	Npfid**		htable;
+};
+
 struct Npconn {
 	pthread_mutex_t	lock;
+	pthread_mutex_t	wlock;
 	int		refcount;
 
 	int		resetting;
@@ -271,7 +281,7 @@ struct Npconn {
 	int		shutdown;
 	Npsrv*		srv;
 	Nptrans*	trans;
-	Npfid**		fidpool;
+	Npfidpool*	fidpool;
 	int		freercnum;
 	Npfcall*	freerclist;
 	void*		aux;
@@ -491,11 +501,11 @@ void np_conn_shutdown(Npconn *);
 void np_conn_respond(Npreq *req);
 void np_respond(Npreq *, Npfcall *);
 
-Npfid **np_fidpool_create(void);
-void np_fidpool_destroy(Npfid **);
+Npfidpool *np_fidpool_create(void);
+void np_fidpool_destroy(Npfidpool *);
 Npfid *np_fid_find(Npconn *, u32);
 Npfid *np_fid_create(Npconn *, u32, void *);
-int np_fid_destroy(Npfid *);
+void np_fid_destroy(Npfid *);
 void np_fid_incref(Npfid *);
 void np_fid_decref(Npfid *);
 
