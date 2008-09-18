@@ -29,6 +29,7 @@
 #include <grp.h>
 #include <errno.h>
 #include <pthread.h>
+#include <sys/syscall.h>
 #include "npfs.h"
 #include "npfsimpl.h"
 
@@ -98,6 +99,18 @@ np_group_decref(Npgroup *g)
 
 	pthread_mutex_destroy(&g->lock);
 	free(g);
+}
+
+int
+sreuid(int a, int b)
+{
+	return syscall(SYS_setreuid, a, b);
+}
+
+int
+sregid(int a, int b)
+{
+	return syscall(SYS_setregid, a, b);
 }
 
 int

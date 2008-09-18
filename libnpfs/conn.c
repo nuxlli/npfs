@@ -310,7 +310,8 @@ np_conn_shutdown(Npconn *conn)
 	conn->trans = NULL;
 	pthread_mutex_unlock(&conn->lock);
 
-	np_trans_destroy(trans);
+	if (trans)
+		np_trans_destroy(trans);
 }
 
 void

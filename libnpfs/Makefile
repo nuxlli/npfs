@@ -24,7 +24,7 @@ LIBFILES=\
 	uxusers.o\
 
 ifeq ($(SYSNAME), Linux)
-	LIBFILES += pipesrv.o
+	LIBFILES += pipesrv.o rdmasrv.o rdmatrans.o
 endif
 
 libnpfs.a: $(LIBFILES)

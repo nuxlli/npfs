@@ -362,6 +362,7 @@ struct Npsrv {
 	pthread_cond_t	reqcond;
 	int		shuttingdown;
 	Npconn*		conns;
+	int		nwthread;
 	Npwthread*	wthreads;
 	Npreq*		reqs_first;
 	Npreq*		reqs_last;
@@ -578,6 +579,8 @@ Nptrans *np_fdtrans_create(int, int);
 Npsrv *np_socksrv_create_tcp(int, int*);
 Npsrv *np_pipesrv_create(int nwthreads);
 int np_pipesrv_mount(Npsrv *srv, char *mntpt, char *user, int mntflags, char *opts);
+
+Npsrv *np_rdmasrv_create(int nwthreads, int *port);
 
 void np_werror(char *ename, int ecode, ...);
 void np_rerror(char **ename, int *ecode);

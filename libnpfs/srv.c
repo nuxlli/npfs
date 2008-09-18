@@ -98,6 +98,7 @@ np_srv_create(int nwthread)
 	srv->workreqs = NULL;
 	srv->wthreads = NULL;
 	srv->debuglevel = 0;
+	srv->nwthread = nwthread;
 
 	for(i = 0; i < nwthread; i++)
 		np_wthread_create(srv);

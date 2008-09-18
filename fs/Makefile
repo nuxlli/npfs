@@ -13,17 +13,19 @@ ETPAN_LPATH=/usr/lib
 
 FS=\
 	npfs\
+	rdmanpfs\
 	ramfs\
 	nullfs\
 	ramfs2\
-	gphotofs\
-	mboxfs\
 	echofs\
 
-all: npfs ramfs nullfs ramfs2 echofs
+all: $(FS)
 
-npfs: ufs.o
-	$(CC) -o npfs $(CFLAGS) ufs.o $(LFLAGS) $(NPFS_LFLAGS)
+npfs: ufs.o npfs.o
+	$(CC) -o npfs $(CFLAGS) ufs.o npfs.o $(LFLAGS) $(NPFS_LFLAGS)
+
+rdmanpfs: ufs.o rdmanpfs.o
+	$(CC) -o rdmanpfs $(CFLAGS) ufs.o rdmanpfs.o $(LFLAGS) $(NPFS_LFLAGS) -libverbs -lrdmacm
 
 ramfs: ramfs.o
 	$(CC) -o ramfs $(CFLAGS) ramfs.o $(LFLAGS)

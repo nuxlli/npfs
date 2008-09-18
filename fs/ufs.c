@@ -35,6 +35,7 @@
 #include <fcntl.h>
 #include <utime.h>
 #include "npfs.h"
+#include "ufs.h"
 
 #if SYSNAME == Linux
 #define NPFS_USE_AIO
@@ -62,12 +63,6 @@ Npsrv *srv;
 int debuglevel;
 int sameuser;
 
-pthread_mutex_t culock = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cucond = PTHREAD_COND_INITIALIZER;
-Npuser *cuser;
-int curef;
-int maxref;
-
 char *Estatfailed = "stat failed";
 char *Ebadfid = "fid unknown or out of range";
 char *Enoextension = "empty extension while creating special file";
@@ -82,26 +77,8 @@ static u32 umode2npmode(mode_t umode, int dotu);
 static mode_t npstat2umode(Npstat *st, int dotu);
 static void ustat2npwstat(char *path, struct stat *st, Npwstat *wstat, int dotu, Npuserpool *up);
 
-static Npfcall* npfs_attach(Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname);
-static int npfs_clone(Npfid *fid, Npfid *newfid);
-static int npfs_walk(Npfid *fid, Npstr *wname, Npqid *wqid);
-static Npfcall* npfs_open(Npfid *fid, u8 mode);
-static Npfcall* npfs_create(Npfid *fid, Npstr *name, u32 perm, u8 mode, 
-	Npstr *extension);
-static Npfcall* npfs_read(Npfid *fid, u64 offset, u32 count, Npreq *);
-static Npfcall* npfs_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *);
-static Npfcall* npfs_clunk(Npfid *fid);
-static Npfcall* npfs_remove(Npfid *fid);
-static Npfcall* npfs_stat(Npfid *fid);
-static Npfcall* npfs_wstat(Npfid *fid, Npstat *stat);
-static void npfs_flush(Npreq *req);
-
-static void npfs_fiddestroy(Npfid *fid);
-
-static int npfs_aio_init(int);
 static int npfs_aio_read(Npfid *fid, Npfcall *rread, u64 offset, u32 count, Npreq *);
 static int npfs_aio_write(Npfid *fid, u8 *data, u64 offset, u32 count, Npreq *);
-static void* npfs_aio_proc(void *a);
 
 #ifdef NPFS_USE_AIO
 #include <libaio.h>
@@ -125,84 +102,6 @@ int use_aio = 0;
 #endif
 
 pthread_t aio_thread;
-
-void
-usage()
-{
-	fprintf(stderr, "npfs: -d -s -p port -w nthreads\n");
-	exit(-1);
-}
-
-int
-main(int argc, char **argv)
-{
-	int c;
-	int port, nwthreads;
-	char *s;
-
-	port = 564;
-	nwthreads = 16;
-	while ((c = getopt(argc, argv, "dsp:w:")) != -1) {
-		switch (c) {
-		case 'd':
-			debuglevel = 1;
-			break;
-
-		case 'p':
-			port = strtol(optarg, &s, 10);
-			if (*s != '\0')
-				usage();
-			break;
-
-		case 'w':
-			nwthreads = strtol(optarg, &s, 10);
-			if (*s != '\0')
-				usage();
-			break;
-
-		case 's':
-			sameuser = 1;
-			break;
-
-		default:
-			usage();
-		}
-	}
-
-	if (use_aio && npfs_aio_init(nwthreads * 2))
-		use_aio = 0;
-
-	if (use_aio && pthread_create(&aio_thread, NULL, npfs_aio_proc, NULL))
-		use_aio = 0;
-
-	srv = np_socksrv_create_tcp(nwthreads, &port);
-
-	if (!srv)
-		return -1;
-
-	srv->dotu = 1;
-	srv->attach = npfs_attach;
-	srv->clone = npfs_clone;
-	srv->walk = npfs_walk;
-	srv->open = npfs_open;
-	srv->create = npfs_create;
-	srv->read = npfs_read;
-	srv->write = npfs_write;
-	srv->clunk = npfs_clunk;
-	srv->remove = npfs_remove;
-	srv->stat = npfs_stat;
-	srv->wstat = npfs_wstat;
-	srv->flush = npfs_flush;
-	srv->fiddestroy = npfs_fiddestroy;
-	srv->debuglevel = debuglevel;
-
-	np_srv_start(srv);
-	while (1) {
-		sleep(100);
-	}
-
-	return 0;
-}
 
 static int
 fidstat(Fid *fid)
@@ -232,7 +131,7 @@ npfs_fidalloc() {
 	return f;
 }
 
-static void
+void
 npfs_fiddestroy(Npfid *fid)
 {
 	Fid *f;
@@ -458,7 +357,7 @@ npfs_set_user(Npuser *user)
 	np_change_user(user);
 }
 
-static Npfcall*
+Npfcall*
 npfs_attach(Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
 {
 	int err;
@@ -498,7 +397,7 @@ done:
 	return ret;
 }
 
-static int
+int
 npfs_clone(Npfid *fid, Npfid *newfid)
 {
 	Fid *f, *nf;
@@ -512,7 +411,7 @@ npfs_clone(Npfid *fid, Npfid *newfid)
 }
 
 
-static int
+int
 npfs_walk(Npfid *fid, Npstr* wname, Npqid *wqid)
 {
 	int n;
@@ -546,7 +445,7 @@ npfs_walk(Npfid *fid, Npstr* wname, Npqid *wqid)
 	return 1;
 }
 
-static Npfcall*
+Npfcall*
 npfs_open(Npfid *fid, u8 mode)
 {
 	int err;
@@ -668,7 +567,7 @@ error:
 }
 
 
-static Npfcall*
+Npfcall*
 npfs_create(Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
 {
 	int n, err, omode;
@@ -750,7 +649,7 @@ out:
 	return ret;
 }
 
-static u32
+u32
 npfs_read_dir(Npfid *fid, u8* buf, u64 offset, u32 count, int dotu)
 {
 	int i, n, plen;
@@ -816,7 +715,7 @@ npfs_read_dir(Npfid *fid, u8* buf, u64 offset, u32 count, int dotu)
 	return n;
 }
 
-static Npfcall*
+Npfcall*
 npfs_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 {
 	int n;
@@ -849,7 +748,7 @@ npfs_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 	return ret;
 }
 
-static Npfcall*
+Npfcall*
 npfs_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 {
 	int n;
@@ -872,7 +771,7 @@ npfs_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 	return np_create_rwrite(n);
 }
 
-static Npfcall*
+Npfcall*
 npfs_clunk(Npfid *fid)
 {
 	Fid *f;
@@ -884,7 +783,7 @@ npfs_clunk(Npfid *fid)
 	return ret;
 }
 
-static Npfcall*
+Npfcall*
 npfs_remove(Npfid *fid)
 {
 	Fid *f;
@@ -906,7 +805,7 @@ out:
 
 }
 
-static Npfcall*
+Npfcall*
 npfs_stat(Npfid *fid)
 {
 	int err;
@@ -928,7 +827,7 @@ npfs_stat(Npfid *fid)
 	return ret;
 }
 
-static Npfcall*
+Npfcall*
 npfs_wstat(Npfid *fid, Npstat *stat)
 {
 	int err;
@@ -1079,7 +978,7 @@ npfs_aio_respond(Aioreq *areq, struct io_event *event, int flush)
 }
 #endif
 
-static void
+void
 npfs_flush(Npreq *req)
 {
 	if (req->tcall->type!=Tread && req->tcall->type!=Twrite)
@@ -1114,7 +1013,7 @@ npfs_flush(Npreq *req)
 	return;
 }
 
-/*static*/ int
+int
 npfs_aio_init(int n)
 {
 	int ret = 0;
@@ -1182,7 +1081,7 @@ npfs_aio_write(Npfid *fid, u8 *data, u64 offset, u32 count, Npreq *req)
 	return ret;
 }
 
-static void*
+void*
 npfs_aio_proc(void *a)
 {
 #ifdef NPFS_USE_AIO
