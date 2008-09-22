@@ -127,6 +127,7 @@ rdmasrv_listenproc(void *a)
 	Rdmasrv *rdma;
 	struct rdma_cm_event *event;
 	struct rdma_cm_id *cmid;
+	enum rdma_cm_event_type etype;
 
 	srv = a;
 	rdma = srv->srvaux;
@@ -135,10 +136,13 @@ rdmasrv_listenproc(void *a)
 		if (ret)
 			goto error;
 
-		switch (event->event) {
+		cmid = (struct rdma_cm_id *)event->id;
+		etype = event->event;
+		rdma_ack_cm_event(event);
+
+		switch (etype) {
 		case RDMA_CM_EVENT_CONNECT_REQUEST:
 			printf("Connection request\n");
-			cmid = (struct rdma_cm_id *) event->id;
 			trans = np_rdmatrans_create(cmid, srv->nwthread, srv->msize);
 			if (trans) {
 				conn = np_conn_create(srv, trans);
@@ -154,15 +158,13 @@ rdmasrv_listenproc(void *a)
 		case RDMA_CM_EVENT_DISCONNECTED:
 			printf("Connection shutting down\n");
 			cmid = (struct rdma_cm_id *) event->id;
-			np_conn_shutdown(conn);
+			conn = cmid->context;
 			break;
 
 		default:
 			fprintf(stderr, "event %d received waiting for a connect request\n",
 				event->event);
 		}
-
-		rdma_ack_cm_event(event);
 	}
 	return NULL;
 

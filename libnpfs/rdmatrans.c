@@ -113,7 +113,7 @@ np_rdmatrans_create(struct rdma_cm_id *cmid, int q_depth, int msize)
 		goto error;
 
 	rdma->next_buf = 0;
-	rdma->snd_mr = ibv_reg_mr(rdma->pd, rdma->snd_buf, msize * q_depth * 2, 0);
+	rdma->snd_mr = ibv_reg_mr(rdma->pd, rdma->snd_buf, rdma->msize * q_depth * 2, 0);
 	if (!rdma->snd_mr)
 		goto error;
 
@@ -206,14 +206,14 @@ rdma_trans_destroy(void *a)
 static int
 rdma_trans_read(u8 *data, u32 count, void *a)
 {
-	int n, ret;
+	int n, ret, closing;
 	struct ibv_cq *cq;
 	struct ibv_wc wc;
 	void *context;
-	struct pollfd pfd;
 	Rdmatrans *rdma;
 	Rdmactx *ctx;
 
+	closing = 0;
 	rdma = a;
 	pthread_mutex_lock(&rdma->lock);
 again:
@@ -239,22 +239,15 @@ again:
 	}
 
 	pthread_mutex_unlock(&rdma->lock);
-	pfd.fd = rdma->ch->fd;
-	pfd.events = POLLIN | POLLERR | POLLNVAL | POLLHUP;
 
 poll:
-	while ((n = poll(&pfd, 1, 1000)) <= 0)
-		;
-
-	if (pfd.revents & (POLLERR | POLLNVAL | POLLHUP))
-		return -1;
-
 	ret = ibv_get_cq_event(rdma->ch, &cq, &context);
 	if (ret) {
 		np_uerror(ret);
 		fprintf(stderr, "Error %d polling cq\n", ret);
 		return -1;
 	}
+	ibv_ack_cq_events(rdma->cq, 1);
 
 	ibv_req_notify_cq(cq, 0);
 	while ((ret = ibv_poll_cq(rdma->cq, 1, &wc)) > 0) {
@@ -262,6 +255,7 @@ poll:
 		if (wc.status != IBV_WC_SUCCESS) {
 			fprintf(stderr, "cq fail: status %d opcode %d\n",
 				wc.status, wc.opcode);
+			closing = 1;
 			continue;
 		}
 
@@ -288,7 +282,7 @@ poll:
 		}
 	}
 
-	if (!ret)
+	if (!ret && !closing)
 		goto poll;
 
 	np_uerror(ret);
