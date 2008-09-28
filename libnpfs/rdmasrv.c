@@ -157,13 +157,13 @@ rdmasrv_listenproc(void *a)
 
 		case RDMA_CM_EVENT_DISCONNECTED:
 			printf("Connection shutting down\n");
-			cmid = (struct rdma_cm_id *) event->id;
 			conn = cmid->context;
+			np_conn_shutdown(conn);
 			break;
 
 		default:
 			fprintf(stderr, "event %d received waiting for a connect request\n",
-				event->event);
+				etype);
 		}
 	}
 	return NULL;

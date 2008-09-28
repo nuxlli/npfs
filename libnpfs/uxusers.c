@@ -54,18 +54,18 @@ static Npuserpool upool = {
 Npuserpool *np_unix_users = &upool;
 
 static struct Npusercache {
+	pthread_mutex_t	lock;
 	int		init;
 	int		hsize;
 	Npuser**	htable;
-	pthread_mutex_t	lock;
-} usercache = { 0 };
+} usercache = { PTHREAD_MUTEX_INITIALIZER, 0 };
 
 static struct Npgroupcache {
+	pthread_mutex_t	lock;
 	int		init;
 	int		hsize;
 	Npgroup**	htable;
-	pthread_mutex_t	lock;
-} groupcache = { 0 };
+} groupcache = { PTHREAD_MUTEX_INITIALIZER, 0 };
 
 pthread_mutex_t grentlock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -97,7 +97,7 @@ initgroupcache(void)
 static Npuser *
 np_unix_uname2user(Npuserpool *up, char *uname)
 {
-	int i, n, found;
+	int i, n;
 	struct passwd pw, *pwp;
 	int bufsize;
 	char *buf;
@@ -107,36 +107,16 @@ np_unix_uname2user(Npuserpool *up, char *uname)
 	if (!usercache.init)
 		initusercache();
 
-	found = 0;
 	for(i = 0; i<usercache.hsize; i++)
 		for(u = usercache.htable[i]; u != NULL; u = u->next)
 			if (strcmp(uname, u->uname) == 0) {
-				found = 1;
-				break;
+				pthread_mutex_unlock(&usercache.lock);
+				goto done;
 			}
-
-	if (found) {
-		pthread_mutex_unlock(&usercache.lock);
-		pthread_mutex_lock(&u->lock);
-		found = u->uname != NULL;
-		pthread_mutex_unlock(&u->lock);
-
-		if (!found)
-			return NULL;
-
-		goto done;
-	}
 
 	u = np_malloc(sizeof(*u) + 256);
 	pthread_mutex_init(&u->lock, NULL);
-	u->uname = NULL;
 
-	n = u->uid % usercache.hsize;
-	u->next = usercache.htable[n];
-	usercache.htable[n] = u;
-
-	pthread_mutex_lock(&u->lock);
-	pthread_mutex_unlock(&usercache.lock);
 
 	bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
 	if (bufsize < 256)
@@ -147,7 +127,8 @@ np_unix_uname2user(Npuserpool *up, char *uname)
 	if (i) {
 		np_uerror(i);
 		free(buf);
-		pthread_mutex_unlock(&u->lock);
+		free(u);
+		pthread_mutex_unlock(&usercache.lock);
 		return NULL;
 	}
 
@@ -156,12 +137,17 @@ np_unix_uname2user(Npuserpool *up, char *uname)
 	u->uid = pw.pw_uid;
 	u->uname = (char *)u + sizeof(*u);
 	strncpy(u->uname, pw.pw_name, 256);
-	u->dfltgroup = (*up->gid2group)(up, pw.pw_gid);
-
+	u->dfltgroup = NULL;
 	u->ngroups = 0;
 	u->groups = NULL;
-	np_init_user_groups(u);
+	n = u->uid % usercache.hsize;
+	u->next = usercache.htable[n];
+	usercache.htable[n] = u;
+	pthread_mutex_lock(&u->lock);
+	pthread_mutex_unlock(&usercache.lock);
 	free(buf);
+	u->dfltgroup = (*up->gid2group)(up, pw.pw_gid);
+	np_init_user_groups(u);
 	pthread_mutex_unlock(&u->lock);
 
 done:
@@ -186,31 +172,13 @@ np_unix_uid2user(Npuserpool *up, u32 uid)
 	n = uid % usercache.hsize;
 	for(u = usercache.htable[n]; u != NULL; u = u->next)
 		if (u->uid == uid) {
-			found = 1;
-			break;
+			pthread_mutex_unlock(&usercache.lock);
+			goto done;
 		}
-
-	if (found) {
-		pthread_mutex_unlock(&usercache.lock);
-		pthread_mutex_lock(&u->lock);
-		found = u->uname != NULL;
-		pthread_mutex_unlock(&u->lock);
-
-		if (!found)
-			return NULL;
-
-		goto done;
-	}
 
 	u = np_malloc(sizeof(*u) + 256);
 	pthread_mutex_init(&u->lock, NULL);
-	u->uname = NULL;
 
-	u->next = usercache.htable[n];
-	usercache.htable[n] = u;
-
-	pthread_mutex_lock(&u->lock);
-	pthread_mutex_unlock(&usercache.lock);
 
 	bufsize = sysconf(_SC_GETPW_R_SIZE_MAX);
 	if (bufsize < 256)
@@ -221,7 +189,8 @@ np_unix_uid2user(Npuserpool *up, u32 uid)
 	if (i) {
 		np_uerror(i);
 		free(buf);
-		pthread_mutex_unlock(&u->lock);
+		free(u);
+		pthread_mutex_unlock(&usercache.lock);
 		return NULL;
 	}
 
@@ -230,10 +199,14 @@ np_unix_uid2user(Npuserpool *up, u32 uid)
 	u->uid = uid;
 	u->uname = (char *)u + sizeof(*u);
 	strncpy(u->uname, pw.pw_name, 256);
-	u->dfltgroup = up->gid2group(up, pw.pw_gid);
-
+	u->next = usercache.htable[n];
+	usercache.htable[n] = u;
+	u->dfltgroup = NULL;
 	u->ngroups = 0;
 	u->groups = NULL;
+	pthread_mutex_lock(&u->lock);
+	pthread_mutex_unlock(&usercache.lock);
+	u->dfltgroup = up->gid2group(up, pw.pw_gid);
 	np_init_user_groups(u);
 	free(buf);
 	pthread_mutex_unlock(&u->lock);
@@ -246,7 +219,7 @@ done:
 static Npgroup *
 np_unix_gname2group(Npuserpool *up, char *gname)
 {
-	int i, bufsize, found;
+	int i, n, bufsize;
 	Npgroup *g;
 	struct group grp, *pgrp;
 	char *buf;
@@ -255,32 +228,15 @@ np_unix_gname2group(Npuserpool *up, char *gname)
 	if (!groupcache.init)
 		initgroupcache();
 
-	found = 0;
 	for(i = 0; i < groupcache.hsize; i++) 
 		for(g = groupcache.htable[i]; g != NULL; g = g->next)
 			if (strcmp(g->gname, gname) == 0) {
-				found = 1;
-				break;
+				pthread_mutex_unlock(&groupcache.lock);
+				goto done;
 			}
-
-	if (found) {
-		pthread_mutex_unlock(&groupcache.lock);
-		pthread_mutex_lock(&g->lock);
-		found = g->gname != NULL;
-		pthread_mutex_unlock(&g->lock);
-
-		if (!found)
-			return NULL;
-
-		goto done;
-	}
 
 	g = np_malloc(sizeof(*g) + 256);
 	pthread_mutex_init(&g->lock, NULL);
-	g->gname = NULL;
-	pthread_mutex_lock(&g->lock);
-	pthread_mutex_unlock(&groupcache.lock);
-
 	bufsize = sysconf(_SC_GETGR_R_SIZE_MAX);
 	if (bufsize < 256)
 		bufsize = 256;
@@ -290,7 +246,8 @@ np_unix_gname2group(Npuserpool *up, char *gname)
 	if (i) {
 		np_uerror(i);
 		free(buf);
-		pthread_mutex_unlock(&g->lock);
+		free(g);
+		pthread_mutex_unlock(&groupcache.lock);
 		return NULL;
 	}
 
@@ -299,8 +256,10 @@ np_unix_gname2group(Npuserpool *up, char *gname)
 	g->gid = grp.gr_gid;
 	g->gname = (char *)g + sizeof(*g);
 	strncpy(g->gname, grp.gr_name, 256);
-
-	pthread_mutex_unlock(&g->lock);
+	n = g->gid % groupcache.hsize;
+	g->next = groupcache.htable[n];
+	groupcache.htable[n] = g;
+	pthread_mutex_unlock(&groupcache.lock);
 	free(buf);
 
 done:
@@ -311,7 +270,7 @@ done:
 static Npgroup *
 np_unix_gid2group(Npuserpool *up, u32 gid)
 {
-	int n, err, found;
+	int n, err;
 	Npgroup *g;
 	struct group grp, *pgrp;
 	int bufsize;
@@ -322,30 +281,15 @@ np_unix_gid2group(Npuserpool *up, u32 gid)
 		initgroupcache();
 
 	n = gid % groupcache.hsize;
-	found = 0;
 	for(g = groupcache.htable[n]; g != NULL; g = g->next)
 		if (g->gid == gid) {
-			found = 1;
-			break;
+			pthread_mutex_unlock(&groupcache.lock);
+			goto done;
 		}
-	if (found) {
-		pthread_mutex_unlock(&groupcache.lock);
-		pthread_mutex_lock(&g->lock);
-		found = g->gname != NULL;
-		pthread_mutex_unlock(&g->lock);
-
-		if (!found)
-			return NULL;
-
-		goto done;
-	}
 
 	g = np_malloc(sizeof(*g) + 256);
 	pthread_mutex_init(&g->lock, NULL);
 	g->gname = NULL;
-	pthread_mutex_lock(&g->lock);
-	pthread_mutex_unlock(&groupcache.lock);
-
 	bufsize = sysconf(_SC_GETGR_R_SIZE_MAX);
 	if (bufsize < 256)
 		bufsize = 256;
@@ -355,7 +299,8 @@ np_unix_gid2group(Npuserpool *up, u32 gid)
 	if (err) {
 		np_uerror(err);
 		free(buf);
-		pthread_mutex_unlock(&g->lock);
+		free(g);
+		pthread_mutex_unlock(&groupcache.lock);
 		return NULL;
 	}
 
@@ -364,8 +309,9 @@ np_unix_gid2group(Npuserpool *up, u32 gid)
 	g->gid = grp.gr_gid;
 	g->gname = (char *)g + sizeof(*g);
 	strncpy(g->gname, grp.gr_name, 256);
-
-	pthread_mutex_unlock(&g->lock);
+	g->next = groupcache.htable[n];
+	groupcache.htable[n] = g;
+	pthread_mutex_unlock(&groupcache.lock);
 	free(buf);
 
 done:

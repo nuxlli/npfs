@@ -143,7 +143,7 @@ np_rdmatrans_create(struct rdma_cm_id *cmid, int q_depth, int msize)
 	if (ret)
 		goto error;
 	rdma->qp = rdma->cm_id->qp;
-	
+
 	p = rdma->rcv_buf;
 	for (i = 0; i < q_depth; i++)
 		rdma_post_recv(rdma, (Rdmactx *)(p + i*rdma->msize));
@@ -179,12 +179,16 @@ static void
 rdma_trans_destroy(void *a)
 {
 	Rdmatrans *rdma;
+	struct ibv_qp_attr attr;
 
 	rdma = a;
 	if (rdma->connected)
 		rdma_disconnect(rdma->cm_id);
-	if (rdma->qp)
+	if (rdma->qp) {
+		attr.qp_state = IBV_QPS_ERR;
+		ibv_modify_qp(rdma->qp, &attr, IBV_QP_STATE);
 		ibv_destroy_qp(rdma->qp);
+	}
 	if (rdma->cq)
 		ibv_destroy_cq(rdma->cq);
 	if (rdma->ch)
