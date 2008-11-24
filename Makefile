@@ -9,3 +9,7 @@ clean:
 	make -C fs clean
 	rm -f *~ include/*~
 
+install:
+	cp include/npfs.h /usr/local/include
+	cp libnpfs/libnpfs.a /usr/local/lib
+

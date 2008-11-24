@@ -2,10 +2,15 @@ SYSNAME:=${shell uname}
 SYSNAME!=uname
 HFILES=../include/npfs.h npfsimpl.h
 CFLAGS=-Wall -g -I../include -D$(SYSNAME)
+INCLUDEDIRS:=/usr/include/ /usr/local/include/ /opt/include/
 
 ifeq ($(SYSNAME), SunOS)
 	CFLAGS += -D_POSIX_PTHREAD_SEMANTICS
 endif
+
+.PHONY: all clean
+
+.all: libnpfs.a
 
 LIBFILES=\
 	conn.o\
@@ -24,7 +29,13 @@ LIBFILES=\
 	uxusers.o\
 
 ifeq ($(SYSNAME), Linux)
-	LIBFILES += pipesrv.o rdmasrv.o rdmatrans.o
+	LIBFILES += pipesrv.o
+	RDMADEPS:=\
+		$(and $(foreach dir,$(INCLUDEDIRS),$(wildcard $(dir)/rdma/rdma_cma.h)), \
+		$(foreach dir,$(INCLUDEDIRS), $(wildcard $(dir)/infiniband/verbs.h)))
+	ifneq ($(strip $(RDMADEPS)),)
+		LIBFILES += rdmasrv.o rdmatrans.o
+	endif
 endif
 
 libnpfs.a: $(LIBFILES)

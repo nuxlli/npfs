@@ -6,6 +6,7 @@ GPHOTO_HPATH=/usr/include/gphoto2
 GPHOTO_LPATH=/usr/lib
 ETPAN_HPATH=/usr/include/libetpan
 ETPAN_LPATH=/usr/lib
+LIBDIRS:=/usr/lib/ /usr/local/lib/ /opt/lib/
 
 #ifeq ($(SYSNAME),Linux)
 #NPFS_LFLAGS=-laio
@@ -13,11 +14,21 @@ ETPAN_LPATH=/usr/lib
 
 FS=\
 	npfs\
-	rdmanpfs\
 	ramfs\
 	nullfs\
 	ramfs2\
 	echofs\
+
+ifeq ($(SYSNAME),Linux)
+	RDMADEPS:=\
+		$(and $(foreach dir,$(LIBDIRS),$(wildcard $(dir)/libibverbs.*)), \
+		$(foreach dir,$(LIBDIRS), $(wildcard $(dir)/librdmacm.*)))
+	ifneq ($(strip $(RDMADEPS)),)
+		FS += rdmanpfs
+       endif
+endif
+
+.PHONY: all clean
 
 all: $(FS)
 
