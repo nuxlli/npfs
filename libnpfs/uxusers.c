@@ -364,10 +364,8 @@ np_init_user_groups(Npuser *u)
 	pthread_mutex_lock(&grentlock);
 	setgrent(); 
 	
-	if(u->dfltgroup) {
+	if(u->dfltgroup)
 		gids[0] = u->dfltgroup->gid;
-		n++;
-	}
 	
 	while ((g = getgrent()) != NULL) { 
 		for (i = 0; g->gr_mem[i]; i++) { 
@@ -382,15 +380,15 @@ np_init_user_groups(Npuser *u)
 	endgrent(); 
 	pthread_mutex_unlock(&grentlock);
 
-	grps = np_malloc(sizeof(*grps) * n);
+	grps = np_malloc(sizeof(*grps) * (n+1));
 	if (!grps) {
 		free(gids);
 		return -1;
 	}
 	
-	for(i = 0; i < n; i++) {
+	for(i = 0; i <= n; i++) {
 		grps[i] = u->upool->gid2group(u->upool, gids[i]);
-		if (grps[i]) {
+		if (!grps[i]) {
 			free(grps);
 			return -1;
 		}
