@@ -1,5 +1,6 @@
 SYSNAME:=${shell uname}
 SYSNAME!=uname
+MULTILIBPATH=${shell test -d /lib64 && echo lib64 || echo lib}
 HFILES=../include/npfs.h npfsimpl.h
 CFLAGS=-Wall -g -I../include -D$(SYSNAME)
 INCLUDEDIRS:=/usr/include/ /usr/local/include/ /opt/include/
@@ -44,9 +45,9 @@ libnpfs.a: $(LIBFILES)
 
 install:
 	mkdir -p $(INSTALLPREFIX)/include
-	mkdir -p $(INSTALLPREFIX)/lib
+	mkdir -p $(INSTALLPREFIX)/$(MULTILIBPATH)
 	cp ../include/npfs.h $(INSTALLPREFIX)/include
-	cp libnpfs.a $(INSTALLPREFIX)/lib
+	cp libnpfs.a $(INSTALLPREFIX)/$(MULTILIBPATH)
 
 
 clean:

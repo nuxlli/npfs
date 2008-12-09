@@ -1,5 +1,6 @@
 SYSNAME:=${shell uname}
 SYSNAME!=uname
+MULTILIBPATH=${shell test -d /lib64 && echo lib64 || echo lib}
 HFILES=../include/npfs.h ../include/npclient.h npcimpl.h
 CFLAGS=-Wall -g -I ../include
 
@@ -24,9 +25,9 @@ libnpclient.a: $(LIBFILES)
 
 install:
 	mkdir -p $(INSTALLPREFIX)/include
-	mkdir -p $(INSTALLPREFIX)/lib
+	mkdir -p $(INSTALLPREFIX)/$(MULTILIBPATH)
 	cp ../include/npclient.h $(INSTALLPREFIX)/include
-	cp libnpclient.a $(INSTALLPREFIX)/lib
+	cp libnpclient.a $(INSTALLPREFIX)/$(MULTILIBPATH)
 
 clean:
 	rm -f *.o *.a *~
