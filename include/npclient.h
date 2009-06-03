@@ -39,6 +39,7 @@ void npc_umount(Npcfsys *fs);
 struct addrinfo *npc_netaddr(char *address, int dfltport);
 Npcfsys * npc_netmount(struct addrinfo *address, Npuser *user, int dfltport, 
 	int (*auth)(Npcfid *afid, Npuser *user, void *aux), void *aux);
+Npcfid* npc_create(Npcfsys *fs, char *path, u32 perm, int mode);
 Npcfid* npc_open(Npcfsys *fs, char *path, int mode);
 int npc_close(Npcfid *fid);
 int npc_remove(Npcfsys *fs, char *path);
