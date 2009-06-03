@@ -14,6 +14,7 @@ LIBDIRS:=/usr/lib/ /usr/local/lib/ /opt/lib/
 
 FS=\
 	npfs\
+	fus\
 	ramfs\
 	nullfs\
 	ramfs2\
@@ -34,6 +35,9 @@ all: $(FS)
 
 npfs: ufs.o npfs.o
 	$(CC) -o npfs $(CFLAGS) ufs.o npfs.o $(LFLAGS) $(NPFS_LFLAGS)
+
+fus: fus.o
+	$(CC) -o fus $(CFLAGS) fus.o $(LFLAGS)
 
 rdmanpfs: ufs.o rdmanpfs.o
 	$(CC) -o rdmanpfs $(CFLAGS) ufs.o rdmanpfs.o $(LFLAGS) $(NPFS_LFLAGS) -libverbs -lrdmacm
