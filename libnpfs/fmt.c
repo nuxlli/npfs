@@ -79,7 +79,7 @@ np_printqid(FILE *f, Npqid *q)
 		buf[n++] = 'L';
 	buf[n] = '\0';
 
-	return fprintf(f, " (%.16llx %x '%s')", q->path, q->version, buf);
+	return fprintf(f, " (%.16llx %x '%s')", (unsigned long long)q->path, q->version, buf);
 }
 
 int
@@ -94,8 +94,8 @@ np_printstat(FILE *f, Npstat *st, int dotu)
 	n += np_printqid(f, &st->qid);
 	n += fprintf(f, " m ");
 	n += np_printperm(f, st->mode);
-	n += fprintf(f, " at %d mt %d l %lld t %d d %d",
-		st->atime, st->mtime, st->length, st->type, st->dev);
+	n += fprintf(f, " at %d mt %d l %llu t %d d %d",
+		st->atime, st->mtime, (unsigned long long)st->length, st->type, st->dev);
 	if (dotu)
 		n += fprintf(f, " ext '%.*s'", st->extension.len, 
 			st->extension.str);
@@ -238,8 +238,8 @@ np_printfcall(FILE *f, Npfcall *fc, int dotu)
 		break;
 		
 	case Tread:
-		ret += fprintf(f, "Tread tag %u fid %d offset %lld count %u", 
-			tag, fid, fc->offset, fc->count);
+		ret += fprintf(f, "Tread tag %u fid %d offset %llu count %u", 
+			tag, fid, (unsigned long long)fc->offset, fc->count);
 		break;
 		
 	case Rread:
@@ -248,8 +248,8 @@ np_printfcall(FILE *f, Npfcall *fc, int dotu)
 		break;
 		
 	case Twrite:
-		ret += fprintf(f, "Twrite tag %u fid %d offset %lld count %u data ",
-			tag, fid, fc->offset, fc->count);
+		ret += fprintf(f, "Twrite tag %u fid %d offset %llu count %u data ",
+			tag, fid, (unsigned long long)fc->offset, fc->count);
 		ret += np_printdata(f, fc->data, fc->count);
 		break;
 		
