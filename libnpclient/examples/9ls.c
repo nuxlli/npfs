@@ -48,27 +48,24 @@ usage()
 int
 main(int argc, char **argv)
 {
-	int sfd, i, n;
+	int i, n;
 	int c, port;
 	char *addr, *s;
-	char *uname, *path;
+	char *path;
 	Npuser *user;
 	Npcfsys *fs;
 	Npcfid *fid;
-	struct sockaddr_in saddr;
-	struct hostent *hostinfo;
 	Npwstat *stat;
 
 	port = 564;
 //	npc_chatty = 1;
 
-	user = np_uid2user(geteuid());
+	user = np_unix_users->uid2user(np_unix_users, geteuid());
 	if (!user) {
 		fprintf(stderr, "cannot retrieve user %d\n", geteuid());
 		exit(1);
 	}
 
-	uname = user->uname;
 	while ((c = getopt(argc, argv, "dp:")) != -1) {
 		switch (c) {
 		case 'd':
@@ -82,7 +79,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'u':
-			uname = optarg;
+			user = np_unix_users->uname2user(np_unix_users, optarg);
 			break;
 
 		default:
@@ -98,28 +95,7 @@ main(int argc, char **argv)
 	addr = argv[optind];
 	path = argv[optind+1];
 
-	sfd = socket(PF_INET, SOCK_STREAM, 0);
-	if (sfd < 0) {
-		perror("socket");
-		exit(1);
-	}
-
-	hostinfo = gethostbyname (addr);
-	if (!hostinfo) {
-		perror("gethostbyname");
-		exit(1);
-	}
-
-	saddr.sin_family = AF_INET;
-	saddr.sin_port = htons(port);
-	saddr.sin_addr = *(struct in_addr *) hostinfo->h_addr;
-
-	if (connect(sfd, (struct sockaddr *) &saddr, sizeof(saddr)) < 0) {
-		perror("connect");
-		exit(1);
-	}
-
-	fs = npc_mount(sfd, NULL, "lucho");
+	fs = npc_netmount(npc_netaddr(addr, port), user, port, NULL, NULL);
 
 	fid = npc_open(fs, path, Oread);
 	if (!fid) {
