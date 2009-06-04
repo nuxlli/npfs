@@ -14,7 +14,6 @@ LIBDIRS:=/usr/lib/ /usr/local/lib/ /opt/lib/
 
 FS=\
 	npfs\
-	fus\
 	ramfs\
 	nullfs\
 	ramfs2\
