@@ -31,6 +31,7 @@ struct Npcfid {
 	Npcfsys*	fsys;
 	u32		fid;
 	u64		offset;
+	Npqid		qid;
 };
 
 Npcfsys* npc_mount(int fd, char *aname, Npuser *user, 

@@ -47,6 +47,7 @@ npc_walk(Npcfsys *fs, char *path)
 	fid = npc_fid_alloc(fs);
 	s = fname;
 	nfid = fs->root->fid;
+	fid->qid = fs->root->qid;
 	while (1) {
 		n = 0;
 		while (n<MAXWELEM && *s!='\0') {
@@ -73,6 +74,8 @@ npc_walk(Npcfsys *fs, char *path)
 			np_werror("file not found", ENOENT);
 			goto error;
 		}
+		if(n > 0)
+			fid->qid = rc->wqids[n-1];
 
 		free(tc);
 		free(rc);

@@ -84,6 +84,7 @@ npc_mount(int fd, char *aname, Npuser *user,
 		user->uname, aname, user->uid, fs->dotu);
 	if (npc_rpc(fs, tc, &rc) < 0)
 		goto error;
+	fs->root->qid = rc->qid;
 
 	free(tc);
 	free(rc);
