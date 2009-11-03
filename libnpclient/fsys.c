@@ -72,6 +72,7 @@ npc_create_fsys(int fd, int msize)
 	fs->msize = msize;
 	fs->trans = NULL;
 	fs->root = NULL;
+	fs->afid = NULL;
 	fs->tagpool = NULL;
 	fs->fidpool = NULL;
 	fs->unsent_first = NULL;
