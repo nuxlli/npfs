@@ -54,16 +54,15 @@ np_fdtrans_create(int fdin, int fdout)
 		return NULL;
 
 	//fprintf(stderr, "np_fdtrans_create trans %p fdtrans %p\n", npt, fdt);
-	fdt->trans = npt;
 	fdt->fdin = fdin;
 	fdt->fdout = fdout;
-
 	npt = np_trans_create(fdt, np_fdtrans_read, np_fdtrans_write, np_fdtrans_destroy);
 	if (!npt) {
 		free(fdt);
 		return NULL;
 	}
 
+	fdt->trans = npt;
 	return npt;
 }
 

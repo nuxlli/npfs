@@ -102,6 +102,8 @@ np_conn_decref(Npconn *conn)
 
 	pthread_mutex_unlock(&conn->lock);
 	pthread_mutex_destroy(&conn->lock);
+	pthread_cond_destroy(&conn->resetcond);
+	pthread_cond_destroy(&conn->resetdonecond);
 	free(conn);
 }
 

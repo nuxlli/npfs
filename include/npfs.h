@@ -520,6 +520,7 @@ int np_deserialize(Npfcall*, u8*, int dotu);
 int np_serialize_stat(Npwstat *wstat, u8* buf, int buflen, int dotu);
 int np_deserialize_stat(Npstat *stat, u8* buf, int buflen, int dotu);
 
+void np_strzero(Npstr *str);
 char *np_strdup(Npstr *str);
 int np_strcmp(Npstr *str, char *cs);
 int np_strncmp(Npstr *str, char *cs, int len);

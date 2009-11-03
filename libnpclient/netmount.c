@@ -38,13 +38,12 @@
 struct addrinfo *
 npc_netaddr(char *address, int dfltport)
 {
-	int fd, r;
-	char *addr, *name, *p, *port;
-	/* stupid library doesn't set it to NULL if error! */
-	struct addrinfo *addrlist = NULL;
+	int r;
+	char *addr, *name, *p, port[8];
+	struct addrinfo *addrlist;
 
+	addrlist = NULL;
 	addr = strdup(address);
-	port = (char *) malloc(sizeof(char) * 6);
 	if (strncmp(addr, "tcp!", 4) == 0)
 		name = addr + 4;
 	else
@@ -54,10 +53,10 @@ npc_netaddr(char *address, int dfltport)
 	if (p) {
 		*p = '\0';
 		p++;
-		sprintf(port, "%s", p);
+		snprintf(port, sizeof(port), "%s", p);
 	}
 	else 
-		sprintf(port, "%d", dfltport);
+		snprintf(port, sizeof(port), "%d", dfltport);
 	
 	/* they have this cute 'hints' thing you can put in. 
 	 * it would be really great if it worked, but it fails in some 
@@ -65,10 +64,10 @@ npc_netaddr(char *address, int dfltport)
 	 */
 	r = getaddrinfo(name, port, NULL, &addrlist);
 	
-	if (r) {
+	if (r)
 		np_werror("cannot resolve name", EIO);
-		close(fd);
-	}
+
+	free(addr);
 	return addrlist;
 }
 

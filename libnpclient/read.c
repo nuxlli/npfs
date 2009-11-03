@@ -117,6 +117,7 @@ npc_read_cb(Npcreq *req, void *cba)
 		goto done;
 
 	nocount = 0;
+	count = 0;
 	for(i = 0; i < r->nreq; i++) {
 		if (r->calls[i].ename) {
 			np_werror(r->calls[i].ename, r->calls[i].ecode);

@@ -180,7 +180,8 @@ buf_put_wstat(struct cbuf *bufp, Npwstat *wstat, Npstat* stat, int statsz, int d
 		buf_put_int32(bufp, wstat->n_uid, &stat->n_uid);
 		buf_put_int32(bufp, wstat->n_gid, &stat->n_gid);
 		buf_put_int32(bufp, wstat->n_muid, &stat->n_muid);
-	}
+	} else
+		np_strzero(&stat->extension);
 }
 
 static inline u8
@@ -279,7 +280,8 @@ buf_get_stat(struct cbuf *buf, Npstat *stat, int dotu)
 		stat->n_uid = buf_get_int32(buf);
 		stat->n_gid = buf_get_int32(buf);
 		stat->n_muid = buf_get_int32(buf);
-	}
+	} else
+		np_strzero(&stat->extension);
 }
 
 static int
@@ -310,6 +312,13 @@ size_wstat(Npwstat *wstat, int dotu)
 	}
 
 	return size;
+}
+
+void
+np_strzero(Npstr *str)
+{
+	str->str = NULL;
+	str->len = 0;
 }
 
 char *
