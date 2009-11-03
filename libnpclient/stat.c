@@ -64,3 +64,51 @@ npc_stat(Npcfsys *fs, char *path)
 
 	return st;
 }
+
+void
+npc_emptystat(Npwstat *st)
+{
+	u64 i64 = 0xffffffffffffffffL;
+	u32 i32 = 0xffffffff;
+	u16 i16 = 0xffff;
+	u8 i8 = 0xff;
+
+	st->size = i16;
+	st->type = i16;
+	st->dev = i32;
+	st->qid.type = i8;
+	st->qid.version = i32;
+	st->qid.path = i64;
+	st->mode = i32;
+	st->atime = i32;
+	st->mtime = i32;
+	st->length = i64;
+	st->name = "";
+	st->uid = "";
+	st->muid = "";
+	st->n_uid = i32;
+	st->n_gid = i32;
+	st->n_muid = i32;
+}
+
+int
+npc_wstat(Npcfsys *fs, char *path, Npwstat *st)
+{
+	Npfcall *tc, *rc;
+	Npcfid *fid;
+
+	fid = npc_walk(fs, path);
+	if (!fid)
+		return 0;
+
+	tc = np_create_twstat(fid->fid, st, fs->dotu);
+	if (npc_rpc(fs, tc, &rc) < 0) {
+		free(tc);
+		npc_close(fid);
+		return -1;
+	}
+	free(rc);
+	free(tc);
+	return 0;
+}
+

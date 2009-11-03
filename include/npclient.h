@@ -47,6 +47,8 @@ int npc_read(Npcfid *fid, u8 *buf, u32 count, u64 offset);
 int npc_write(Npcfid *fid, u8 *buf, u32 count, u64 offset);
 int npc_dirread(Npcfid *fid, Npwstat **stat);
 Npwstat *npc_stat(Npcfsys *fs, char *path);
+void npc_emptystat(Npwstat *st);
+int npc_wstat(Npcfsys *fs, char *path, Npwstat *st);
 
 int npc_readnb(Npcfid *fid, u8 *buf, u32 count, u64 offset,
 	void (*cb)(void *cba, u32 count), void *cba);
