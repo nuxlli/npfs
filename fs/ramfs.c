@@ -879,7 +879,7 @@ main(int argc, char **argv)
 	nwthreads = 4;
 	opts = "";
 	logfile = "/tmp/ramfs.log";
-	user = np_unix_users->uid2user(np_unix_users, getuid());
+	user = np_default_users->uid2user(np_default_users, getuid());
 	while ((c = getopt(argc, argv, "du:w:b:o:l:")) != -1) {
 		switch (c) {
 		case 'd':
@@ -887,7 +887,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'u':
-			user = np_unix_users->uname2user(np_unix_users, optarg);
+			user = np_default_users->uname2user(np_default_users, optarg);
 			break;
 
 		case 'b':

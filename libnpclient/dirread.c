@@ -23,8 +23,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
-#include <pthread.h>
+#ifndef _WIN32
+  #include <unistd.h>
+#endif
 #include <errno.h>
 #include "npfs.h"
 #include "npclient.h"

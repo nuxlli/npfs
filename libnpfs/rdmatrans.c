@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/poll.h>
-#include <pthread.h>
 #include <errno.h>
 #include "npfs.h"
 #include "npfsimpl.h"

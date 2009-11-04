@@ -23,10 +23,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <pthread.h>
 #include <errno.h>
 #include <assert.h>
 #include <limits.h>
+#include <time.h>
 #include "npfs.h"
 #include "npfsimpl.h"
 

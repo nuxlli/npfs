@@ -23,10 +23,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/poll.h>
-#include <pthread.h>
+#ifndef _WIN32
+  #include <unistd.h>
+#endif
 #include <errno.h>
 #include "npfs.h"
 #include "npfsimpl.h"

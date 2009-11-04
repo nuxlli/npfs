@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <pthread.h>
 #include <errno.h>
 #include <stdarg.h>
 #include "npfs.h"
@@ -60,7 +59,7 @@ np_malloc(int size)
 }
 
 static void
-np_init_error_key()
+np_init_error_key(void)
 {
 	pthread_key_create(&error_key, np_destroy_error);
 }
@@ -140,6 +139,29 @@ np_haserror()
 		return 0;
 }
 
+#ifdef _WIN32
+void
+np_uerror(int ecode)
+{
+	char buf[100];
+
+	// XXX?
+	snprintf(buf, sizeof buf, "error %d\n", ecode);
+	np_werror(buf, ecode);
+}
+
+void
+np_suerror(char *s, int ecode)
+{
+	char buf[512];
+
+	// XXX?
+	snprintf(buf, sizeof buf, "error %d\n", ecode);
+	snprintf(buf, sizeof(buf), "%s: error %d", s, ecode);
+	np_werror(buf, ecode);
+}
+
+#else // !_WIN32
 void
 np_uerror(int ecode)
 {
@@ -159,3 +181,4 @@ np_suerror(char *s, int ecode)
 	snprintf(buf, sizeof(buf), "%s: %s", s, err);
 	np_werror(buf, ecode);
 }
+#endif

@@ -23,13 +23,13 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
-#include <pwd.h>
-#include <grp.h>
 #include <errno.h>
-#include <pthread.h>
-#include <sys/syscall.h>
+#ifndef _WIN32
+  #include <unistd.h>
+  #include <grp.h>
+  #include <sys/syscall.h>
+#endif
 #include "npfs.h"
 #include "npfsimpl.h"
 
@@ -101,6 +101,15 @@ np_group_decref(Npgroup *g)
 	free(g);
 }
 
+#ifdef _WIN32
+int
+np_change_user(Npuser *u)
+{
+	np_uerror(EPERM);
+	return -1;
+}
+
+#else // !_WIN32
 int
 sreuid(int a, int b)
 {
@@ -144,6 +153,7 @@ error:
 	np_uerror(errno);
 	return -1;
 }
+#endif
 
 Npuser *
 np_current_user(void)

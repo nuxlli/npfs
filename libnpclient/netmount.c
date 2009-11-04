@@ -23,14 +23,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <errno.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-
+#ifndef _WIN32
+  #include <unistd.h>
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <netdb.h>
+  #include <arpa/inet.h>
+#else
+  #include <ws2tcpip.h>
+#endif
+#include <assert.h>
 #include "npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"
@@ -88,7 +91,11 @@ npc_netmount(struct addrinfo *addrlist, Npuser *user, int dfltport,
 
 	if (connect(fd, addrlist->ai_addr, sizeof(*addrlist->ai_addr)) < 0) {
 		/* real computers have errstr */
+#ifdef _WIN32
+		snprintf(ename, sizeof ename, "connect error"); // XXX
+#else // !_WIN32
 		strerror_r(errno, ename, sizeof(ename));
+#endif
 		s = inet_ntoa(*(struct in_addr*) addrlist->ai_addr);
 		np_werror("%s:%s", errno, s, ename);
 		close(fd);

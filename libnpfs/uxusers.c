@@ -28,7 +28,6 @@
 #include <pwd.h>
 #include <grp.h>
 #include <errno.h>
-#include <pthread.h>
 #include "npfs.h"
 #include "npfsimpl.h"
 
@@ -51,7 +50,7 @@ static Npuserpool upool = {
 	.gdestroy = np_unix_gdestroy,
 };
 
-Npuserpool *np_unix_users = &upool;
+Npuserpool *np_default_users = &upool;
 
 static struct Npusercache {
 	pthread_mutex_t	lock;

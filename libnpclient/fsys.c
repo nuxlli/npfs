@@ -23,11 +23,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <errno.h>
-#include <sys/socket.h>
 #include <assert.h>
+#ifndef _WIN32
+  #include <unistd.h>
+  #include <sys/socket.h>
+#endif
 #include "npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"

@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <pthread.h>
 #include <errno.h>
 #include "npfs.h"
 #include "npfsimpl.h"

@@ -24,17 +24,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
-#include <pthread.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <assert.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-
 #include "npfs.h"
 #include "npclient.h"
+#ifdef _WIN32
+  #include "winhelp.c"
+#else
+  #include <unistd.h>
+  #define __cdecl
+#endif
+
 
 extern int npc_chatty;
 
@@ -45,7 +45,7 @@ usage()
 	exit(1);
 }
 
-int
+int __cdecl
 main(int argc, char **argv)
 {
 	int i, n;
@@ -60,11 +60,16 @@ main(int argc, char **argv)
 	port = 564;
 //	npc_chatty = 1;
 
-	user = np_unix_users->uid2user(np_unix_users, geteuid());
+#ifdef _WIN32
+	init();
+	user = np_default_users->uname2user(np_default_users, "nobody");
+#else
+	user = np_default_users->uid2user(np_default_users, geteuid());
 	if (!user) {
 		fprintf(stderr, "cannot retrieve user %d\n", geteuid());
 		exit(1);
 	}
+#endif
 
 	while ((c = getopt(argc, argv, "dp:")) != -1) {
 		switch (c) {
@@ -79,7 +84,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'u':
-			user = np_unix_users->uname2user(np_unix_users, optarg);
+			user = np_default_users->uname2user(np_default_users, optarg);
 			break;
 
 		default:

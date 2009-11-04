@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <pthread.h>
 #include <errno.h>
 #include <assert.h>
 #include "npfs.h"
@@ -39,7 +38,7 @@ static inline void
 buf_init(struct cbuf *buf, void *data, int datalen)
 {
 	buf->sp = buf->p = data;
-	buf->ep = data + datalen;
+	buf->ep = (char*)data + datalen;
 }
 
 static inline int

@@ -23,12 +23,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <string.h>
-#include <pwd.h>
-#include <grp.h>
 #include <errno.h>
-#include <pthread.h>
 #include "npfs.h"
 #include "npfsimpl.h"
 

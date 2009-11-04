@@ -25,7 +25,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <netinet/in.h>
-#include <pthread.h>
 #include <errno.h>
 #include <sys/mount.h>
 #include "npfs.h"

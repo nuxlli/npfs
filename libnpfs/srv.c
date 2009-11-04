@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <pthread.h>
 #include <errno.h>
 #include <assert.h>
 #include "npfs.h"
@@ -90,7 +89,7 @@ np_srv_create(int nwthread)
 	srv->remove = np_default_remove;
 	srv->stat = np_default_stat;
 	srv->wstat = np_default_wstat;
-	srv->upool = np_unix_users;
+	srv->upool = np_default_users;
 
 	srv->conns = NULL;
 	srv->reqs_first = NULL;

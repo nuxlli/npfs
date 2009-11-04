@@ -21,7 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-extern Npuserpool *np_unix_users;
+extern Npuserpool *np_default_users;
 
 /* fcall.c */
 Npfcall *np_version(Npreq *req, Npfcall *tc);

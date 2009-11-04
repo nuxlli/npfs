@@ -23,7 +23,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <pthread.h>
 #include <errno.h>
 #include "npfs.h"
 #include "npfsimpl.h"
@@ -79,7 +78,11 @@ np_printqid(FILE *f, Npqid *q)
 		buf[n++] = 'L';
 	buf[n] = '\0';
 
+#ifdef _WIN32
+	return fprintf(f, " (%.16I64x %x '%s')", (unsigned long long)q->path, q->version, buf);
+#else
 	return fprintf(f, " (%.16llx %x '%s')", (unsigned long long)q->path, q->version, buf);
+#endif
 }
 
 int
@@ -94,8 +97,13 @@ np_printstat(FILE *f, Npstat *st, int dotu)
 	n += np_printqid(f, &st->qid);
 	n += fprintf(f, " m ");
 	n += np_printperm(f, st->mode);
+#ifdef _WIN32
+	n += fprintf(f, " at %d mt %d l %I64u t %d d %d",
+		st->atime, st->mtime, (unsigned long long)st->length, st->type, st->dev);
+#else
 	n += fprintf(f, " at %d mt %d l %llu t %d d %d",
 		st->atime, st->mtime, (unsigned long long)st->length, st->type, st->dev);
+#endif
 	if (dotu)
 		n += fprintf(f, " ext '%.*s'", st->extension.len, 
 			st->extension.str);
@@ -238,8 +246,13 @@ np_printfcall(FILE *f, Npfcall *fc, int dotu)
 		break;
 		
 	case Tread:
+#ifdef _WIN32
+		ret += fprintf(f, "Tread tag %u fid %d offset %I64u count %u", 
+			tag, fid, (unsigned long long)fc->offset, fc->count);
+#else
 		ret += fprintf(f, "Tread tag %u fid %d offset %llu count %u", 
 			tag, fid, (unsigned long long)fc->offset, fc->count);
+#endif
 		break;
 		
 	case Rread:
@@ -248,8 +261,13 @@ np_printfcall(FILE *f, Npfcall *fc, int dotu)
 		break;
 		
 	case Twrite:
+#ifdef _WIN32
+		ret += fprintf(f, "Twrite tag %u fid %d offset %I64u count %u data ",
+			tag, fid, (unsigned long long)fc->offset, fc->count);
+#else
 		ret += fprintf(f, "Twrite tag %u fid %d offset %llu count %u data ",
 			tag, fid, (unsigned long long)fc->offset, fc->count);
+#endif
 		ret += np_printdata(f, fc->data, fc->count);
 		break;
 		
