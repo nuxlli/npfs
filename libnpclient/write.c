@@ -53,32 +53,43 @@ struct Npcwrite
 int
 npc_write(Npcfid *fid, u8 *buf, u32 count, u64 offset)
 {
-	int i, l, n;
+	u32 l;
+	Npfcall *tc, *rc;
+
+	if (count > (fid->fsys->msize - IOHDRSZ))
+		count = fid->fsys->msize - IOHDRSZ;
+
+	tc = np_create_twrite(fid->fid, offset, count, buf);
+	if (npc_rpc(fid->fsys, tc, &rc) < 0) {
+		free(tc);
+		return -1;
+	}
+
+	l = rc->count;
+	free(tc);
+	free(rc);
+
+	return (int)l;
+}
+
+int
+npc_writen(Npcfid *fid, u8 *buf, u32 count, u64 offset)
+{
+	u32 n;
+	int l;
 	Npfcall *tc, *rc;
 
 	n = 0;
 	while (n < count) {
-		i = count - n;
-		if (i > (fid->fsys->msize - IOHDRSZ))
-			i = fid->fsys->msize - IOHDRSZ;
-
-		tc = np_create_twrite(fid->fid, offset + n, i, buf);
-		if (npc_rpc(fid->fsys, tc, &rc) < 0) {
-			free(tc);
+		l = npc_write(fid, buf + n, count - n, offset + n);
+		if (l < 0)
 			return -1;
-		}
-
-		l = rc->count;
-		free(tc);
-		free(rc);
-
 		if (!l)
 			break;
-
 		n += l;
 	}
 
-	return n;
+	return (int)n;
 }
 
 static void 

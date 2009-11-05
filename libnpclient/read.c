@@ -53,35 +53,43 @@ struct Npcread
 int
 npc_read(Npcfid *fid, u8 *buf, u32 count, u64 offset)
 {
-	int i, n, l;
+	u32 l;
 	Npfcall *tc, *rc;
+
+	if (count > (fid->fsys->msize - IOHDRSZ))
+		count = fid->fsys->msize - IOHDRSZ;
+
+	tc = np_create_tread(fid->fid, offset, count);
+	if (npc_rpc(fid->fsys, tc, &rc) < 0) {
+		free(tc);
+		return -1;
+	}
+
+	l = rc->count;
+	if (l > count)
+		l = count;
+	memmove(buf, rc->data, l);
+	free(rc);
+	free(tc);
+	return (int)l;
+}
+
+int
+npc_readn(Npcfid *fid, u8 *buf, u32 count, u64 offset)
+{
+	u32 n;
+	int l;
 
 	n = 0;
 	while (n < count) {
-		i = count - n;
-		if (i > (fid->fsys->msize - IOHDRSZ))
-			i = fid->fsys->msize - IOHDRSZ;
-
-		tc = np_create_tread(fid->fid, offset + n, i);
-		if (npc_rpc(fid->fsys, tc, &rc) < 0) {
-			free(tc);
+		l = npc_read(fid, buf + n, count - n, offset + n);
+		if (l < 0)
 			return -1;
-		}
-
-		l = rc->count;
-		if (l > count)
-			l = count;
-		memmove(buf, rc->data, l);
-		free(rc);
-		free(tc);
-
-		if (l == 0)
+		if (!l)
 			break;
-
 		n += l;
 	}
-
-	return n;
+	return (int)n;
 }
 
 static void 
