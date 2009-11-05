@@ -43,6 +43,9 @@ npc_mount(int fd, char *aname, Npuser *user,
 	if (npc_rpc(fs, tc, &rc) < 0)
 		goto error;
 
+	if (rc->msize < fs->msize)
+		fs->msize = rc->msize;
+
 	if (rc->version.len==8 && !memcmp(rc->version.str, "9P2000.u", 8)) {
 		fs->dotu = 1;
 	} else if (rc->version.len==6 && !memcmp(rc->version.str, "9P2000", 6)) {
