@@ -1054,6 +1054,10 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 		fc->afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->uname);
 		buf_get_str(bufp, &fc->aname);
+		if(dotu)
+			fc->n_uname = buf_get_int32(bufp);
+		else
+			fc->n_uname = ~0;
 		break;
 
 	case Rauth:
@@ -1069,6 +1073,10 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 		fc->afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->uname);
 		buf_get_str(bufp, &fc->aname);
+		if(dotu)
+			fc->n_uname = buf_get_int32(bufp);
+		else
+			fc->n_uname = ~0;
 		break;
 
 	case Rattach:
@@ -1080,7 +1088,7 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 		if (dotu)
 			fc->ecode = buf_get_int32(bufp);
 		else
-			fc->ecode = 0;
+			fc->ecode = ~0;
 		break;
 
 	case Twalk:
@@ -1121,6 +1129,8 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 		fc->mode = buf_get_int8(bufp);
 		if (dotu)
 			buf_get_str(bufp, &fc->extension);
+		else
+			np_strzero(&fc->extension);
 		break;
 
 	case Tread:
