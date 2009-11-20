@@ -165,13 +165,13 @@ np_attach(Npreq *req, Npfcall *tc)
 			np_werror(Eunknownfid, EIO);
 			goto done;
 		}
-
+	} else {
 		if (!afid->type&Qtauth) {
 			np_werror(Ebadusefid, EIO);
 			goto done;
 		}
-	} else 
 		np_fid_incref(afid);
+	}
 
 	if (tc->uname.len && tc->n_uname==~0) {
 		uname = np_strdup(&tc->uname);
