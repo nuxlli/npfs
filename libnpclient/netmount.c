@@ -83,6 +83,9 @@ npc_netmount(struct addrinfo *addrlist, Npuser *user, int dfltport,
 	int fd;
 	char ename[32];
 
+        if (!addrlist)
+                goto error;
+
 	fd = socket(addrlist->ai_family, addrlist->ai_socktype, 0);
 	if (fd < 0) {
 		np_uerror(errno);
