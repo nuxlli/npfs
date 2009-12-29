@@ -41,6 +41,7 @@
 struct addrinfo *
 npc_netaddr(char *address, int dfltport)
 {
+	struct addrinfo hints;
 	int r;
 	char *addr, *name, *p, port[8];
 	struct addrinfo *addrlist;
@@ -61,11 +62,10 @@ npc_netaddr(char *address, int dfltport)
 	else 
 		snprintf(port, sizeof(port), "%d", dfltport);
 	
-	/* they have this cute 'hints' thing you can put in. 
-	 * it would be really great if it worked, but it fails in some 
-	 * places, so just don't use it.
-	 */
-	r = getaddrinfo(name, port, NULL, &addrlist);
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = PF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	r = getaddrinfo(name, port, &hints, &addrlist);
 	
 	if (r)
 		np_werror("cannot resolve name", EIO);
