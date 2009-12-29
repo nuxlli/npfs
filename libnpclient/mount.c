@@ -29,7 +29,7 @@
 #include "npcimpl.h"
 
 Npcfsys*
-npc_mount(int fd, char *aname, Npuser *user, 
+npc_mount(int fd, char *aname, int dotu, Npuser *user,
 	int (*auth)(Npcfid *afid, Npuser *user, void *aux), void *aux)
 {
 	Npcfsys *fs;
@@ -39,7 +39,7 @@ npc_mount(int fd, char *aname, Npuser *user,
 	if (!fs)
 		return NULL;
 
-	tc = np_create_tversion(8216, "9P2000.u");
+	tc = np_create_tversion(8216, dotu ? "9P2000.u" : "9P2000");
 	if (npc_rpc(fs, tc, &rc) < 0)
 		goto error;
 

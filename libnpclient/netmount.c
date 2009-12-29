@@ -76,7 +76,7 @@ npc_netaddr(char *address, int dfltport)
 
 
 Npcfsys *
-npc_netmount(struct addrinfo *addrlist, Npuser *user, int dfltport, 
+npc_netmount(struct addrinfo *addrlist, int dotu, Npuser *user, int dfltport, 
 	int (*auth)(Npcfid *afid, Npuser *user, void *aux), void *aux)
 {
 	char *s;
@@ -105,7 +105,7 @@ npc_netmount(struct addrinfo *addrlist, Npuser *user, int dfltport,
 		goto error;
 	}
 
-	return npc_mount(fd, NULL, user, auth, aux);
+	return npc_mount(fd, NULL, dotu, user, auth, aux);
 
 error:
 	return NULL;

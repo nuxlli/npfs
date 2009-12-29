@@ -41,7 +41,7 @@ extern int npc_chatty;
 static void
 usage()
 {
-	fprintf(stderr, "9ls -d -p port addr path\n");
+	fprintf(stderr, "9ls [-dU] [-p port] [-u user] addr path\n");
 	exit(1);
 }
 
@@ -49,7 +49,7 @@ int __cdecl
 main(int argc, char **argv)
 {
 	int i, n;
-	int c, port;
+	int c, port, dotu;
 	char *addr, *s;
 	char *path;
 	Npuser *user;
@@ -71,7 +71,8 @@ main(int argc, char **argv)
 	}
 #endif
 
-	while ((c = getopt(argc, argv, "dp:")) != -1) {
+	dotu = 1;
+	while ((c = getopt(argc, argv, "dp:u:U")) != -1) {
 		switch (c) {
 		case 'd':
 			npc_chatty = 1;
@@ -87,6 +88,10 @@ main(int argc, char **argv)
 			user = np_default_users->uname2user(np_default_users, optarg);
 			break;
 
+		case 'U':
+			dotu = 0;
+			break;
+
 		default:
 			usage();
 		}
@@ -100,7 +105,15 @@ main(int argc, char **argv)
 	addr = argv[optind];
 	path = argv[optind+1];
 
-	fs = npc_netmount(npc_netaddr(addr, port), user, port, NULL, NULL);
+	fs = npc_netmount(npc_netaddr(addr, port), dotu, user, port, NULL, NULL);
+	if(!fs) {
+		char *estr;
+		int eno;
+
+		np_rerror(&estr, &eno);
+		fprintf(stderr, "error mounting: (%d) %s\n", eno, estr);
+		exit(1);
+	}
 
 	fid = npc_open(fs, path, Oread);
 	if (!fid) {
