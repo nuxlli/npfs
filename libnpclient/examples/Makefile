@@ -1,7 +1,7 @@
 SYSNAME:=${shell uname}
 SYSNAME!=uname
 CFLAGS=-Wall -g -I ../../include
-LFLAGS=-L ../../libnpfs -L .. -lnpclient -lnpfs -lpthread
+LFLAGS=-L../../libnpfs -L.. -lnpclient -lnpfs -lpthread
 
 CMD=\
 	9ls\
