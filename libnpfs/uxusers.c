@@ -123,7 +123,7 @@ np_unix_uname2user(Npuserpool *up, char *uname)
 
 	buf = np_malloc(bufsize);
 	i = getpwnam_r(uname, &pw, buf, bufsize, &pwp);
-	if (i) {
+	if (i || !pwp) {
 		np_uerror(i);
 		free(buf);
 		free(u);
@@ -185,7 +185,7 @@ np_unix_uid2user(Npuserpool *up, u32 uid)
 
 	buf = np_malloc(bufsize);
 	i = getpwuid_r(uid, &pw, buf, bufsize, &pwp);
-	if (i) {
+	if (i || !pwp) {
 		np_uerror(i);
 		free(buf);
 		free(u);
@@ -242,7 +242,7 @@ np_unix_gname2group(Npuserpool *up, char *gname)
 
 	buf = np_malloc(bufsize);
 	i = getgrnam_r(gname, &grp, buf, bufsize, &pgrp);
-	if (i) {
+	if (i || !pgrp) {
 		np_uerror(i);
 		free(buf);
 		free(g);
@@ -295,7 +295,7 @@ np_unix_gid2group(Npuserpool *up, u32 gid)
 
 	buf = np_malloc(bufsize);
 	err = getgrgid_r(gid, &grp, buf, bufsize, &pgrp);
-	if (err) {
+	if (err || !pgrp) {
 		np_uerror(err);
 		free(buf);
 		free(g);
