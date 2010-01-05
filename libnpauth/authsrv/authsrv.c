@@ -69,10 +69,7 @@ getKey(char *user, char key[7])
 
     u = findUser(user);
     if(u) {
-int i;
         printf("using user=%s password=%s\n", user, u->passwd);
-for(i = 0; i < 7; i++) printf("%02x ", (unsigned char)u->key[i]);
-printf("\n");
         return u->key;
     }
     printf("user %s not found, sending garbage\n", user);
