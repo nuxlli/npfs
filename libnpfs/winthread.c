@@ -7,7 +7,6 @@
  */
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
 #include <errno.h>
 #include <assert.h>
 #include "npfs.h"
@@ -95,7 +94,6 @@ pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mux)
 {
 	int x, last;
 
-	assert(cond->waiters < 10);
 	pthread_mutex_lock(&cond->lock);
 	cond->waiters++;
 	pthread_mutex_unlock(&cond->lock);
