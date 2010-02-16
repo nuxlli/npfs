@@ -67,11 +67,11 @@ npc_walk(Npcfsys *fs, char *path)
 		if (npc_rpc(fs, tc, &rc) < 0)
 			goto error;
 
-		nfid = fid->fid;
 		if (rc->nwqid != n) {
 			np_werror("file not found", ENOENT);
 			goto error;
 		}
+		nfid = fid->fid;
 		if(n > 0)
 			fid->qid = rc->wqids[n-1];
 
