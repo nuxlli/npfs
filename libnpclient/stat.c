@@ -71,7 +71,6 @@ npc_emptystat(Npwstat *st)
 	u16 i16 = 0xffff;
 	u8 i8 = 0xff;
 
-	st->size = i16;
 	st->type = i16;
 	st->dev = i32;
 	st->qid.type = i8;
@@ -83,6 +82,7 @@ npc_emptystat(Npwstat *st)
 	st->length = i64;
 	st->name = "";
 	st->uid = "";
+	st->gid = "";
 	st->muid = "";
 	st->n_uid = i32;
 	st->n_gid = i32;
