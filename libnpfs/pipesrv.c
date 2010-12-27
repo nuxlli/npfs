@@ -87,7 +87,7 @@ np_pipesrv_mount(Npsrv *srv, char *mntpt, char *user, int mntflags, char *opts)
 
 	ps = srv->srvaux;
 	snprintf(options, sizeof(options), 
-		"msize=%d,name=%s,%s,proto=fd,rfdno=%d,wfdno=%d,%s",
+		"maxdata=%d,uname=%s,%s,trans=fd,rfdno=%d,wfdno=%d,%s",
 		srv->msize, user, srv->dotu?"":"noextend",
 		ps->pipout[0], ps->pipin[1], opts);
  
