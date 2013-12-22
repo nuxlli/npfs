@@ -4,7 +4,7 @@ export INSTALLPREFIX
 
 all:
 	make -C libnpfs
-	make -C libnpclient
+	#make -C libnpclient
 	make -C fs
 
 clean:

@@ -14,10 +14,10 @@ LIBDIRS:=/usr/lib/ /usr/local/lib/ /opt/lib/
 
 FS=\
 	npfs\
-	ramfs\
-	nullfs\
-	ramfs2\
-	echofs\
+	#ramfs\
+	#nullfs\
+	#ramfs2\
+	#echofs\
 
 ifeq ($(SYSNAME),Linux)
 	RDMADEPS:=\
