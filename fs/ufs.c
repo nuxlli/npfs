@@ -311,7 +311,7 @@ ustat2npwstat(char *path, struct stat *st, Npwstat *wstat, int dotu, Npuserpool 
 
 	u = up->uid2user(up, st->st_uid);
 	g = up->gid2group(up, st->st_gid);
-	
+
 	wstat->uid = u?u->uname:"???";
 	wstat->gid = g?g->gname:"???";
 	wstat->muid = "";
@@ -328,7 +328,7 @@ ustat2npwstat(char *path, struct stat *st, Npwstat *wstat, int dotu, Npuserpool 
 
 			ext[err] = '\0';
 		} else if (wstat->mode & Dmdevice) {
-			snprintf(ext, sizeof(ext), "%c %u %u", 
+			snprintf(ext, sizeof(ext), "%c %u %u",
 				S_ISCHR(st->st_mode)?'c':'b',
 				major(st->st_rdev), minor(st->st_rdev));
 		} else {
@@ -381,7 +381,7 @@ npfs_attach(Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
 		fid->path = strdup("/");
 	else
 		fid->path = np_strdup(aname);
-	
+
 	nfid->aux = fid;
 	err = fidstat(fid);
 	if (err < 0) {
@@ -407,7 +407,7 @@ npfs_clone(Npfid *fid, Npfid *newfid)
 	nf->path = strdup(f->path);
 	newfid->aux = nf;
 
-	return 1;	
+	return 1;
 }
 
 
@@ -606,7 +606,7 @@ npfs_create(Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
 			rmdir(npath);
 			goto out;
 		}
-		
+
 		f->dir = opendir(npath);
 		if (!f->dir) {
 			create_rerror(errno);
@@ -623,7 +623,7 @@ npfs_create(Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
 			goto out;
 		}
 	} else {
-		f->fd = open(npath, O_CREAT|omode2uflags(mode), 
+		f->fd = open(npath, O_CREAT|omode2uflags(mode),
 			perm & 0777);
 		if (f->fd < 0) {
 			create_rerror(errno);
@@ -684,7 +684,7 @@ npfs_read_dir(Npfid *fid, u8* buf, u64 offset, u32 count, int dotu)
 
 		path = malloc(plen + strlen(dname) + 2);
 		sprintf(path, "%s/%s", f->path, dname);
-		
+
 		if (lstat(path, &st) < 0) {
 			free(path);
 			create_rerror(errno);
@@ -733,7 +733,7 @@ npfs_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 			if (n >= 0)
 				return NULL;
 		}
-			
+
 		n = pread(f->fd, ret->data, count, offset);
 		if (n < 0)
 			create_rerror(errno);
@@ -896,7 +896,7 @@ npfs_wstat(Npfid *fid, Npstat *stat)
 	}
 
 	if (stat->mtime != (u32)~0) {
-		tb.actime = 0;
+		tb.actime = stat->atime;
 		tb.modtime = stat->mtime;
 		if (utime(f->path, &tb) < 0) {
 			create_rerror(errno);
@@ -939,7 +939,7 @@ npfs_wstat(Npfid *fid, Npstat *stat)
 		}
 	}
 	ret = np_create_rwstat();
-	
+
 out:
 	return ret;
 }
@@ -1100,7 +1100,7 @@ npfs_aio_proc(void *a)
 //		fprintf(stderr,"++ %d\n", n);
 		for(i = 0; i < n; i++) {
 			count = events[i].res;
-			areq = (Aioreq *) ((char *) events[i].obj - 
+			areq = (Aioreq *) ((char *) events[i].obj -
 				(int) (&((Aioreq *)0)->iocb));
 
 			npfs_aio_respond(areq, &events[i], 0);
